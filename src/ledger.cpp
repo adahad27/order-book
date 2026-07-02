@@ -11,7 +11,7 @@ DOes price-time matching on the incoming order against resting orders in opposit
 Will match most favorable trade until all quantity is exhausted, before moving onto next most favorable trade.
 */
 template <typename Compare>
-void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<Order>, Compare>> &book, Order &order) {
+void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<Order>, Compare>> &book, std::vector<Event> &event_history, Order &order) {
     while(order.quantity > 0) {
         /*
         If queue.empty() -> we remove this price level from the map
@@ -45,10 +45,9 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<O
 
 uint32_t Ledger::add_order(Order &order) {
     
-    resolve_order(ask_book, order);
     if (order.order_type == OrderType::ASK) {
         while(bid_book.contains(order.ticker) && order.price <= bid_book[order.ticker].begin()->first) {
-            resolve_order(bid_book, order);
+            resolve_order(bid_book,event_history, order);
             if(order.quantity == 0) {
                 break;
             }
@@ -58,7 +57,7 @@ uint32_t Ledger::add_order(Order &order) {
         }        
     } else {
         while(ask_book.contains(order.ticker) && order.price >= ask_book[order.ticker].begin()->first) {
-            resolve_order(ask_book, order);
+            resolve_order(ask_book,event_history, order);
             if(order.quantity == 0) {
                 break;
             }
