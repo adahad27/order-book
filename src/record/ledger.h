@@ -25,7 +25,7 @@ public:
 
     }
 
-    uint32_t add_order(const Order &order);
+    uint32_t add_order(Order &order);
 
     bool cancel_order(uint32_t order_id);
 
