@@ -5,9 +5,21 @@ enum class OrderType {
     ASK
 };
 
+enum class EventType {
+    INC_SELL,
+    INC_BUY,
+    ORDER_EXEC
+};
 
 struct Order {
-    OrderType order_type;
-    uint32_t quantity;
+    std::string ticker;
     std::string user_id;
+    OrderType order_type;
+    double price;
+    uint32_t quantity;    
+};
+
+struct Event {
+    EventType event_type;
+    Order order;
 };
