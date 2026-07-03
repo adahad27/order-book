@@ -34,16 +34,18 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<O
         event_history.emplace_back(matched_order);
 
         if(order.quantity >= order_queue.front().quantity) {
+            order.quantity -= order_queue.front().quantity;
             order_queue.pop_front();
-            order.quantity -= order_queue.front().quantity;                   
-        } else {                   
+            
+        } else {       
+            order_queue.front().quantity -= order.quantity;            
             order.quantity = 0;
-            order_queue.front().quantity -= order.quantity;
+            
         }
     }
 }
 
-uint32_t Ledger::add_order(Order &order) {
+uint32_t Ledger::add_order(Order order) {
     
     if (order.order_type == OrderType::ASK) {
         while(bid_book.contains(order.ticker) && order.price <= bid_book[order.ticker].begin()->first) {

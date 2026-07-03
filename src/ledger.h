@@ -10,8 +10,8 @@
 class Ledger {
 private:
     // Ticker -> Map(Price -> Order)
-    std::unordered_map<std::string, std::map<double, std::deque<Order>>> bid_book; //max-heap
-    std::unordered_map<std::string, std::map<double, std::deque<Order>, std::greater<double>>> ask_book; //min-heap
+    std::unordered_map<std::string, std::map<double, std::deque<Order>>> bid_book{}; //max-heap
+    std::unordered_map<std::string, std::map<double, std::deque<Order>, std::greater<double>>> ask_book{}; //min-heap
 
     std::unordered_map<uint32_t, Order*> outstanding_orders; //need to use smart pointers here
 
@@ -25,7 +25,7 @@ public:
 
     }
 
-    uint32_t add_order(Order &order);
+    uint32_t add_order(Order order);
 
     bool cancel_order(uint32_t order_id);
 
