@@ -73,3 +73,9 @@ uint32_t Ledger::add_order(Order order) {
     global_order_id++;
     return global_order_id;
 }
+
+void Ledger::print_events() {
+    for(uint64_t i = 0; i < event_history.size(); ++i) {
+        std::cout <<"Event " << i << ": " << event_history[i];
+    }
+}
