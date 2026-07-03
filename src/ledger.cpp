@@ -11,7 +11,7 @@ DOes price-time matching on the incoming order against resting orders in opposit
 Will match most favorable trade until all quantity is exhausted, before moving onto next most favorable trade.
 */
 template <typename Compare>
-void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<Order>, Compare>> &book, std::vector<Event> &event_history, Order &order) {
+void resolve_order(std::unordered_map<std::string, std::map<double, std::list<Order>, Compare>> &book, std::vector<Event> &event_history, Order &order) {
     while(order.quantity > 0) {
         /*
         If queue.empty() -> we remove this price level from the map
@@ -22,7 +22,7 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<O
         +-> Add to record history if order is executed 
         */
         double price = book[order.ticker].begin()->first;
-        std::deque<Order> &order_queue = book[order.ticker].begin()->second;
+        std::list<Order> &order_queue = book[order.ticker].begin()->second;
         if(order_queue.empty()) {
             book[order.ticker].erase(price);
             return;
@@ -46,32 +46,70 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::deque<O
 }
 
 uint32_t Ledger::add_order(Order order) {
-    
+    std::string ticker{order.ticker};
+    double price{order.price};
+
     if (order.order_type == OrderType::ASK) {
-        while(bid_book.contains(order.ticker) && order.price <= bid_book[order.ticker].begin()->first) {
+        while(bid_book.contains(ticker) && price <= bid_book[ticker].begin()->first) {
             resolve_order(bid_book,event_history, order);
             if(order.quantity == 0) {
                 break;
             }
         }
         if(order.quantity > 0) {
-            ask_book[order.ticker][order.price].push_back(order);
+            ask_book[ticker][price].emplace_back(order);
+            outstanding_orders[global_order_id++] = OrderEntry{ask_book[ticker].find(price), std::prev(ask_book[ticker][price].end())};
+
         }        
     } else {
-        while(ask_book.contains(order.ticker) && order.price >= ask_book[order.ticker].begin()->first) {
+        while(ask_book.contains(ticker) && price >= ask_book[ticker].begin()->first) {
             resolve_order(ask_book,event_history, order);
             if(order.quantity == 0) {
                 break;
             }
         }
         if(order.quantity > 0) {
-            bid_book[order.ticker][order.price].push_back(order);
+            bid_book[ticker][price].emplace_back(order);
+            outstanding_orders[global_order_id++] = OrderEntry{bid_book[ticker].find(price), std::prev(bid_book[ticker][price].end())};
         }
         
     }
 
-    global_order_id++;
     return global_order_id;
+}
+
+bool Ledger::cancel_order(uint32_t order_id) {
+    if(!outstanding_orders.contains(order_id)) {
+        return false;
+    }
+
+    //cannot do a lookup by price to find the queue to delete in because that is O(logn)
+    outstanding_orders[order_id].entry_list->second.erase(outstanding_orders[order_id].entry);
+    outstanding_orders.erase(order_id);
+    
+    return true;
+}
+
+bool Ledger::modify_order(uint32_t order_id, Order order) {
+    if(!outstanding_orders.contains(order_id)) {
+        return false;
+    }
+
+    /*
+    If price is different, then we must erase the intial value from
+    the price level.
+    Then we must insert a new order with the modified price into the
+    order book.
+
+    Should we utilize the methods that we have already?
+    */
+    if(order.price != outstanding_orders[order_id].entry->price) {
+
+    }
+    outstanding_orders[order_id].entry->quantity = order.quantity;
+
+
+    return true;
 }
 
 void Ledger::print_events() {

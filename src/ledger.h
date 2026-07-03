@@ -1,6 +1,6 @@
 #pragma once
 #include <map>
-#include <deque>
+#include <list>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -10,10 +10,10 @@
 class Ledger {
 private:
     // Ticker -> Map(Price -> Order)
-    std::unordered_map<std::string, std::map<double, std::deque<Order>, std::greater<double>>> bid_book{}; //max-heap
-    std::unordered_map<std::string, std::map<double, std::deque<Order>>> ask_book{}; //min-heap
+    std::unordered_map<std::string, std::map<double, std::list<Order>, std::greater<double>>> bid_book{}; //max-heap
+    std::unordered_map<std::string, std::map<double, std::list<Order>>> ask_book{}; //min-heap
 
-    std::unordered_map<uint32_t, Order*> outstanding_orders; //need to use smart pointers here
+    std::unordered_map<uint32_t, OrderEntry> outstanding_orders; //need to use smart pointers here
 
     std::vector<Event> event_history;
 
@@ -31,7 +31,8 @@ public:
 
     bool cancel_order(uint32_t order_id);
 
-    bool modify_order(uint32_t order_id, const Order &order);
+    //Only able to change price/quantity
+    bool modify_order(uint32_t order_id, Order order);
 
     const Order& get_best_ask() const;
 

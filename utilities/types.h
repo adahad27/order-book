@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <iostream>
+#include <list>
 enum class OrderType {
     BID,
     ASK
@@ -18,6 +19,11 @@ struct Order {
     OrderType order_type;
     double price;
     uint32_t quantity;    
+};
+
+struct OrderEntry {
+    std::map<double, std::list<Order>>::iterator entry_list;
+    std::list<Order>::iterator entry;
 };
 
 struct Event {
