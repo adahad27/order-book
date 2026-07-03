@@ -33,4 +33,10 @@ public:
 
     bool modify_order(uint32_t order_id, const Order &order);
 
+    const Order& get_best_ask() const;
+
+    const Order& get_best_bid() const;
+
+    //T get_spread() const;
+
 };
