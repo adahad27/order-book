@@ -45,12 +45,18 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::list<Or
     }
 }
 
-uint32_t Ledger::add_order(Order order) {
+uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     std::string ticker{order.ticker};
     double price{order.price};
+    uint32_t id;
+    if(order_id.has_value()) {
+        id = order_id.value();
+    } else {
+        id = global_order_id++;
+    }
 
     if (order.order_type == OrderType::ASK) {
-        while(bid_book.contains(ticker) && price <= bid_book[ticker].begin()->first) {
+        while(bid_book.contains(ticker) && !bid_book[ticker].empty() && price <= bid_book[ticker].begin()->first) {
             resolve_order(bid_book,event_history, order);
             if(order.quantity == 0) {
                 break;
@@ -58,11 +64,14 @@ uint32_t Ledger::add_order(Order order) {
         }
         if(order.quantity > 0) {
             ask_book[ticker][price].emplace_back(order);
-            outstanding_orders[global_order_id++] = OrderEntry{ask_book[ticker].find(price), std::prev(ask_book[ticker][price].end())};
+            outstanding_orders[id] = OrderEntry{
+                ask_book[ticker].find(price),
+                std::prev(ask_book[ticker][price].end())
+            };
 
         }        
     } else {
-        while(ask_book.contains(ticker) && price >= ask_book[ticker].begin()->first) {
+        while(ask_book.contains(ticker) && !ask_book[ticker].empty() && price >= ask_book[ticker].begin()->first) {
             resolve_order(ask_book,event_history, order);
             if(order.quantity == 0) {
                 break;
@@ -70,12 +79,19 @@ uint32_t Ledger::add_order(Order order) {
         }
         if(order.quantity > 0) {
             bid_book[ticker][price].emplace_back(order);
-            outstanding_orders[global_order_id++] = OrderEntry{bid_book[ticker].find(price), std::prev(bid_book[ticker][price].end())};
+            outstanding_orders[id] = OrderEntry{
+                bid_book[ticker].find(price),
+                std::prev(bid_book[ticker][price].end())
+            };
         }
         
     }
 
-    return global_order_id;
+    return id;
+}
+
+uint32_t Ledger::add_order(Order order) {
+    return add_order_id(order, std::optional<uint32_t>{});
 }
 
 bool Ledger::cancel_order(uint32_t order_id) {
@@ -104,6 +120,8 @@ bool Ledger::modify_order(uint32_t order_id, Order order) {
     Should we utilize the methods that we have already?
     */
     if(order.price != outstanding_orders[order_id].entry->price) {
+        cancel_order(order_id);
+        add_order_id(order, order_id);
 
     }
     outstanding_orders[order_id].entry->quantity = order.quantity;

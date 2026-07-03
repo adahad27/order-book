@@ -24,7 +24,7 @@ int main() {
     //     });
     // }
 
-    book.add_order(Order{
+    auto order_1 = book.add_order(Order{
         .ticker = "GOOGL",
         .user_id = "User 1",
         .order_type = OrderType::ASK,
@@ -32,13 +32,17 @@ int main() {
         .quantity = 5,
     });
 
-    book.add_order(Order{
+    book.cancel_order(order_1);
+
+    auto order_2 = book.add_order(Order{
         .ticker = "GOOGL",
         .user_id = "User 2",
         .order_type = OrderType::ASK,
         .price = 102,
         .quantity = 8,
     });
+
+    book.cancel_order(order_2);
 
     book.add_order(Order{
         .ticker = "GOOGL",

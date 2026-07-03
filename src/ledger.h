@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include "types.h"
+#include <optional>
 
 
 class Ledger {
@@ -19,11 +20,15 @@ private:
 
     uint32_t global_order_id;
 
+    uint32_t add_order_id(Order order, std::optional<uint32_t> order_id);
+
 public:
 
     Ledger() : global_order_id(0) {
 
     }
+
+    
 
     uint32_t add_order(Order order);
 
