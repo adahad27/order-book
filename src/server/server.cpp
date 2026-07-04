@@ -328,6 +328,8 @@ void run_server(int fd) {
                 delete_connection(i, connections, states);
                 close(socket_fd);
                 std::cout << "Connection closed on socket: " << socket_fd << std::endl;
+                // std::cout << "Current history is: " << std::endl;
+                // book.print_events();
             }
         }
 

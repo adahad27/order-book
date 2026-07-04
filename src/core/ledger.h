@@ -7,6 +7,7 @@
 #include "types.h"
 #include <optional>
 #include <functional>
+#include <deque>
 
 
 class Ledger {

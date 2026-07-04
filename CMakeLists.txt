@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 project(order_book)
 
 add_executable(main main.cpp)
+add_executable(server src/server/server.cpp)
 
 add_subdirectory(src)
 add_subdirectory(utilities)

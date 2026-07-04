@@ -21,6 +21,12 @@ enum class EventType {
     ORDER_EXEC
 };
 
+enum class JobType {
+    ADD,
+    CANCEL,
+    MODIFY
+};
+
 struct Order {
     std::string ticker;
     std::string user_id;
@@ -28,6 +34,12 @@ struct Order {
     OrderSubType order_subtype;
     double price;
     uint32_t quantity;    
+};
+
+struct Job {
+    JobType job_type;
+    uint32_t order_id;
+    Order order;
 };
 
 struct OrderEntry {
