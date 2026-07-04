@@ -32,7 +32,15 @@ int main() {
         .quantity = 5,
     });
 
-    book.cancel_order(order_1);
+    Order modified_1 = Order {
+        .ticker = "GOOGL",
+        .user_id = "User 1",
+        .order_type = OrderType::ASK,
+        .price = 101,
+        .quantity = 1,
+    };
+
+    book.modify_order(order_1, modified_1);
 
     auto order_2 = book.add_order(Order{
         .ticker = "GOOGL",
@@ -42,7 +50,15 @@ int main() {
         .quantity = 8,
     });
 
-    book.cancel_order(order_2);
+    Order modified_2 = Order {
+        .ticker = "GOOGL",
+        .user_id = "User 2",
+        .order_type = OrderType::ASK,
+        .price = 99,
+        .quantity = 1,
+    };
+
+    book.modify_order(order_2, modified_2);
 
     book.add_order(Order{
         .ticker = "GOOGL",

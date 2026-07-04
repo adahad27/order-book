@@ -99,8 +99,20 @@ bool Ledger::cancel_order(uint32_t order_id) {
         return false;
     }
 
+    Order &order = *(outstanding_orders[order_id].entry);
+
+    if(outstanding_orders[order_id].entry_list->second.size() == 1) {
+        if(order.order_type == OrderType::ASK) {
+            ask_book[order.ticker].erase(order.price);
+        } else {
+            bid_book[order.ticker].erase(order.price);
+        }
+    } else {
+        outstanding_orders[order_id].entry_list->second.erase(outstanding_orders[order_id].entry);
+    }
     //cannot do a lookup by price to find the queue to delete in because that is O(logn)
-    outstanding_orders[order_id].entry_list->second.erase(outstanding_orders[order_id].entry);
+    
+    
     outstanding_orders.erase(order_id);
     
     return true;
@@ -116,8 +128,6 @@ bool Ledger::modify_order(uint32_t order_id, Order order) {
     the price level.
     Then we must insert a new order with the modified price into the
     order book.
-
-    Should we utilize the methods that we have already?
     */
     if(order.price != outstanding_orders[order_id].entry->price) {
         cancel_order(order_id);
