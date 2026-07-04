@@ -6,6 +6,7 @@
 #include <vector>
 #include "types.h"
 #include <optional>
+#include <functional>
 
 
 class Ledger {

@@ -28,6 +28,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 1",
         .order_type = OrderType::ASK,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 101,
         .quantity = 5,
     });
@@ -36,6 +37,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 1",
         .order_type = OrderType::ASK,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 101,
         .quantity = 1,
     };
@@ -46,6 +48,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 2",
         .order_type = OrderType::ASK,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 102,
         .quantity = 8,
     });
@@ -54,6 +57,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 2",
         .order_type = OrderType::ASK,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 99,
         .quantity = 1,
     };
@@ -64,6 +68,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 3",
         .order_type = OrderType::BID,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 99,
         .quantity = 10,
     });
@@ -72,6 +77,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 5",
         .order_type = OrderType::BID,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 99,
         .quantity = 10,
     });
@@ -80,6 +86,7 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 6",
         .order_type = OrderType::BID,
+        .order_subtype = OrderSubType::LIMIT,
         .price = 99,
         .quantity = 10,
     });
@@ -90,7 +97,8 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 4",
         .order_type = OrderType::BID,
-        .price = 102,
+        .order_subtype = OrderSubType::MARKET,
+        .price = 1000,
         .quantity = 7,
     });
 
@@ -98,7 +106,8 @@ int main() {
         .ticker = "GOOGL",
         .user_id = "User 7",
         .order_type = OrderType::ASK,
-        .price = 98,
+        .order_subtype = OrderSubType::MARKET,
+        .price = 1000,
         .quantity = 7,
     });
 

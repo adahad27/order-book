@@ -55,35 +55,31 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
         id = global_order_id++;
     }
 
-    if (order.order_type == OrderType::ASK) {
-        while(bid_book.contains(ticker) && !bid_book[ticker].empty() && price <= bid_book[ticker].begin()->first) {
-            resolve_order(bid_book,event_history, order);
+    auto execute_order = [&](auto &home_book, auto &counter_book, std::function<bool(double, double)> compare) {
+        if(order.order_subtype == OrderSubType::MARKET) {
+            //If market order, then don't need to compare order price against resting liquidity price
+            compare = [](double a, double b) {return true;};
+        }
+        while(counter_book.contains(ticker) && !counter_book[ticker].empty() && compare(price, counter_book[ticker].begin()->first)) {
+            resolve_order(counter_book, event_history, order);
             if(order.quantity == 0) {
                 break;
             }
         }
         if(order.quantity > 0) {
-            ask_book[ticker][price].emplace_back(order);
+            home_book[ticker][price].emplace_back(order);
             outstanding_orders[id] = OrderEntry{
-                ask_book[ticker].find(price),
-                std::prev(ask_book[ticker][price].end())
+                home_book[ticker].find(price),
+                std::prev(home_book[ticker][price].end())
             };
 
-        }        
+        }
+    };
+
+    if (order.order_type == OrderType::ASK) {
+        execute_order(ask_book, bid_book, [](double a, double b) {return a <= b;});       
     } else {
-        while(ask_book.contains(ticker) && !ask_book[ticker].empty() && price >= ask_book[ticker].begin()->first) {
-            resolve_order(ask_book,event_history, order);
-            if(order.quantity == 0) {
-                break;
-            }
-        }
-        if(order.quantity > 0) {
-            bid_book[ticker][price].emplace_back(order);
-            outstanding_orders[id] = OrderEntry{
-                bid_book[ticker].find(price),
-                std::prev(bid_book[ticker][price].end())
-            };
-        }
+        execute_order(bid_book, ask_book, [](double a, double b) {return a >= b;});
         
     }
 

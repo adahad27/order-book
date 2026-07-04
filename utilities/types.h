@@ -7,6 +7,12 @@ enum class OrderType {
     ASK
 };
 
+enum class OrderSubType {
+    MARKET, // buy/sell at whatever the best current price is on the opposite side
+    LIMIT, // buy/sell at the limit that is set in the order or a better price
+    STOPLOSS // sell at best market price if the last traded price is at or below some level
+};
+
 enum class EventType {
     INC_SELL,
     INC_BUY,
@@ -17,6 +23,7 @@ struct Order {
     std::string ticker;
     std::string user_id;
     OrderType order_type;
+    OrderSubType order_subtype;
     double price;
     uint32_t quantity;    
 };
