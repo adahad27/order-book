@@ -10,7 +10,9 @@ enum class OrderType {
 enum class OrderSubType {
     MARKET, // buy/sell at whatever the best current price is on the opposite side
     LIMIT, // buy/sell at the limit that is set in the order or a better price
-    STOPLOSS // sell at best market price if the last traded price is at or below some level
+    STOP_LOSS, // sell at best market price if the last traded price is at or below some level
+    FILL_OR_KILL, // fill the position in it's entirety if possible, else cancel it
+    IMMED_OR_CANCEL //fill or partially fill the order if possible, else cancel it
 };
 
 enum class EventType {
