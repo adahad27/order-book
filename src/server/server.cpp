@@ -348,6 +348,7 @@ void run_server(int fd) {
 
 int main() {
 
+    book.start_ledger();
     int fd = init_server();
 
     run_server(fd);

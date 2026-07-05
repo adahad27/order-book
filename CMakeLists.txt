@@ -5,12 +5,12 @@ project(order_book)
 
 find_package(Boost REQUIRED COMPONENTS thread)
 
-add_executable(main main.cpp)
 add_executable(server src/server/server.cpp)
+add_executable(tester tests/tester.cpp)
 
 add_subdirectory(src)
 add_subdirectory(utilities)
+add_subdirectory(tests)
 
-target_link_libraries(main ledger)
-target_link_libraries(main utilities)
 target_link_libraries(server Boost::thread)
+target_link_libraries(tester Boost::thread)

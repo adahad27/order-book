@@ -10,8 +10,10 @@ EFFECT:
 DOes price-time matching on the incoming order against resting orders in opposite book.
 Will match most favorable trade until all quantity is exhausted, before moving onto next most favorable trade.
 */
-template <typename Compare>
-void resolve_order(std::unordered_map<std::string, std::map<double, std::list<Order>, Compare>> &book, std::vector<Event> &event_history, Order &order) {
+
+void Ledger::resolve_order(auto &book, Order &order) {
+    
+    
     while(order.quantity > 0) {
         /*
         If queue.empty() -> we remove this price level from the map
@@ -28,14 +30,32 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::list<Or
             return;
         }
         
-        Event matched_order = Event{.event_type = EventType::ORDER_EXEC, .order = Order{order}};
-        matched_order.order.price = order_queue.front().price;
-        matched_order.order.quantity = std::min(order_queue.front().quantity, matched_order.order.quantity);
+        FilledOrder filled_order;
+        filled_order.ticker = order.ticker;
+
+        if(order.order_type == OrderType::BID) {
+            filled_order.bidder_id = order.user_id;
+            filled_order.asker_id = order_queue.front().user_id;
+            filled_order.bid_order_id = order.order_id;
+            filled_order.ask_order_id = order_queue.front().order_id;
+        } else {
+            filled_order.asker_id = order.user_id;
+            filled_order.bidder_id = order_queue.front().user_id;
+            filled_order.ask_order_id = order.order_id;
+            filled_order.bid_order_id = order_queue.front().order_id;
+        }
+        filled_order.price = order_queue.front().price;
+        filled_order.quantity = std::min(order_queue.front().quantity, order.quantity);
+
+
+        Event matched_order = Event{.event_type = EventType::ORDER_EXEC, .filled_order = filled_order};
         event_history.emplace_back(matched_order);
 
         if(order.quantity >= order_queue.front().quantity) {
             order.quantity -= order_queue.front().quantity;
+            outstanding_orders.erase(order_queue.front().order_id);
             order_queue.pop_front();
+            
             
         } else {       
             order_queue.front().quantity -= order.quantity;            
@@ -43,6 +63,9 @@ void resolve_order(std::unordered_map<std::string, std::map<double, std::list<Or
             
         }
     }
+    
+
+    
 }
 
 uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
@@ -61,13 +84,15 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
         m_resp_queue.push_back(id);
     }
 
+    order.order_id = id;
+
     auto execute_order = [&](auto &home_book, auto &counter_book, std::function<bool(double, double)> compare) {
         if(order.order_subtype == OrderSubType::MARKET) {
             //If market order, then don't need to compare order price against resting liquidity price
             compare = [](double a, double b) {return true;};
         }
         while(counter_book.contains(ticker) && !counter_book[ticker].empty() && compare(price, counter_book[ticker].begin()->first)) {
-            resolve_order(counter_book, event_history, order);
+            resolve_order(counter_book, order);
             if(order.quantity == 0) {
                 break;
             }
@@ -92,8 +117,8 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     return id;
 }
 
-void Ledger::add_order(Order order) {
-    add_order_id(order, std::optional<uint32_t>{});
+uint32_t Ledger::add_order(Order order) {
+    return add_order_id(order, std::optional<uint32_t>{});
 }
 
 void Ledger::cancel_order_helper(uint32_t order_id) {
@@ -114,22 +139,23 @@ void Ledger::cancel_order_helper(uint32_t order_id) {
     outstanding_orders.erase(order_id);
 }
 
-void Ledger::cancel_order(uint32_t order_id) {
+bool Ledger::cancel_order(uint32_t order_id) {
     if(!outstanding_orders.contains(order_id)) {
         m_resp_queue.push_back(false);
-        return;
+        return false;
     } else {
         m_resp_queue.push_back(true);
     }
 
     cancel_order_helper(order_id);
+    return true;
     
 }
 
-void Ledger::modify_order(uint32_t order_id, Order order) {
+bool Ledger::modify_order(uint32_t order_id, Order order) {
     if(!outstanding_orders.contains(order_id)) {
         m_resp_queue.push_back(false);
-        return;
+        return false;
     } else {
         m_resp_queue.push_back(true);
     }
@@ -147,6 +173,7 @@ void Ledger::modify_order(uint32_t order_id, Order order) {
     }
     outstanding_orders[order_id].entry->quantity = order.quantity;
 
+    return true;
 
 }
 
@@ -171,4 +198,8 @@ void Ledger::start_loop() {
                 break;
         }
     }
+}
+
+void Ledger::start_ledger() {
+    boost::thread engine_thread{&Ledger::start_loop, this};
 }

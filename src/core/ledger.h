@@ -11,9 +11,12 @@
 #include "queue.h"
 #include "boost/thread.hpp"
 
+class Tester;
 
 class Ledger {
 private:
+
+    friend class Tester;
     // Ticker -> Map(Price -> Order)
     std::unordered_map<std::string, std::map<double, std::list<Order>, std::greater<double>>> bid_book{}; //max-heap
     std::unordered_map<std::string, std::map<double, std::list<Order>>> ask_book{}; //min-heap
@@ -27,28 +30,28 @@ private:
     WaitQueue<Job> &m_req_queue;
     WaitQueue<uint32_t> &m_resp_queue;
 
+    void resolve_order(auto &book, Order &order);
+
     uint32_t add_order_id(Order order, std::optional<uint32_t> order_id);
 
     void cancel_order_helper(uint32_t order_id);
 
     void start_loop();
 
-    void add_order(Order order);
+    uint32_t add_order(Order order);
 
-    void cancel_order(uint32_t order_id);
+    bool cancel_order(uint32_t order_id);
 
     //Only able to change price/quantity
-    void modify_order(uint32_t order_id, Order order);
+    bool modify_order(uint32_t order_id, Order order);
 
 public:
 
-    Ledger() = delete;
 
     Ledger(WaitQueue<Job> &req_queue, WaitQueue<uint32_t> &resp_queue) : 
-    global_order_id(0), m_req_queue(req_queue), m_resp_queue(resp_queue) {
+    global_order_id(0), m_req_queue(req_queue), m_resp_queue(resp_queue) {}
 
-        boost::thread engine_thread{&Ledger::start_loop, this};
-    }
+    void start_ledger();
 
     
 
