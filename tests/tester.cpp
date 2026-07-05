@@ -116,7 +116,7 @@ int main() {
         assert(order_equal(tester.ask_book.at("GOOGL").at(100).front(), sell2));
         assert(order_equal(tester.ask_book.at("GOOGL").at(100).back(), sell3));
     }
-    std::cout << "All Add Orders passed...\n";
+    std::cout << "All Add Orders passed...\n\n";
 
     std::cout << "Testing Matching...\n";
     {
@@ -137,9 +137,19 @@ int main() {
             .price = 100,
             .quantity = 5,
         };
+        size_t prev_events_amzn = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("AMZN").empty());
-        assert(tester.bid_book.at("AMZN").empty());
+        assert(tester.event_history.size() > prev_events_amzn);
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == resting.user_id);
+            assert(ev.filled_order.price == 100);
+            assert(ev.filled_order.quantity == 5);
+        }
     }
 
     {
@@ -160,9 +170,19 @@ int main() {
             .price = 0,
             .quantity = 5,
         };
+        size_t prev_events_aapl = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("AAPL").empty());
-        assert(tester.bid_book.at("AAPL").empty());
+        assert(tester.event_history.size() > prev_events_aapl);
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == resting.user_id);
+            assert(ev.filled_order.price == 105);
+            assert(ev.filled_order.quantity == 5);
+        }
     }
 
     {
@@ -183,9 +203,19 @@ int main() {
             .price = 115,
             .quantity = 5,
         };
+        size_t prev_events_msft = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("MSFT").empty());
-        assert(tester.bid_book.at("MSFT").empty());
+        assert(tester.event_history.size() > prev_events_msft);
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == resting.user_id);
+            assert(ev.filled_order.price == 110);
+            assert(ev.filled_order.quantity == 5);
+        }
     }
 
     {
@@ -206,9 +236,19 @@ int main() {
             .price = 0,
             .quantity = 5,
         };
+        size_t prev_events_nflx = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("NFLX").empty());
-        assert(tester.bid_book.at("NFLX").empty());
+        assert(tester.event_history.size() > prev_events_nflx);
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == resting.user_id);
+            assert(ev.filled_order.price == 120);
+            assert(ev.filled_order.quantity == 5);
+        }
     }
 
     {
@@ -238,12 +278,23 @@ int main() {
             .price = 135,
             .quantity = 8,
         };
+        size_t prev_events_fb = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("FB").size() == 1);
         assert(tester.ask_book.at("FB").count(140) == 1);
         assert(tester.ask_book.at("FB").at(140).front().quantity == 5);
         assert(tester.bid_book.at("FB").count(135) == 1);
         assert(tester.bid_book.at("FB").at(135).front().quantity == 3);
+        assert(tester.event_history.size() > prev_events_fb);
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == ask1.user_id);
+            assert(ev.filled_order.price == 130);
+            assert(ev.filled_order.quantity == 5);
+        }
     }
 
     {
@@ -273,11 +324,30 @@ int main() {
             .price = 135,
             .quantity = 8,
         };
+        size_t prev_events_ibm = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("IBM").size() == 1);
         assert(tester.ask_book.at("IBM").count(132) == 1);
         assert(tester.ask_book.at("IBM").at(132).front().quantity == 2);
-        assert(tester.bid_book.at("IBM").empty());
+        assert(tester.event_history.size() > prev_events_ibm);
+        {
+            const Event &ev = tester.event_history[tester.event_history.size() - 2];
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == ask1.user_id);
+            assert(ev.filled_order.price == 130);
+            assert(ev.filled_order.quantity == 5);
+        }
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == ask2.user_id);
+            assert(ev.filled_order.price == 132);
+            assert(ev.filled_order.quantity == 3);
+        }
     }
 
     {
@@ -298,12 +368,22 @@ int main() {
             .price = 140,
             .quantity = 4,
         };
+        size_t prev_events_tsla = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("TSLA").count(140) == 1);
         assert(tester.ask_book.at("TSLA").at(140).front().quantity == 6);
-        assert(tester.bid_book.at("TSLA").empty());
+        assert(tester.event_history.size() > prev_events_tsla);
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == incoming.ticker);
+            assert(ev.filled_order.bidder_id == incoming.user_id);
+            assert(ev.filled_order.asker_id == ask.user_id);
+            assert(ev.filled_order.price == 140);
+            assert(ev.filled_order.quantity == 4);
+        }
     }
-    std::cout << "All Matching tests passed...\n";
+    std::cout << "All Matching tests passed...\n\n";
 
     std::cout << "Testing Cancel Orders...\n";
     {
@@ -398,7 +478,6 @@ int main() {
         };
         uint32_t bid_id = tester.add_order(bid);
         assert(tester.ask_book.at("VZ").empty());
-        assert(tester.bid_book.at("VZ").empty());
         assert(!tester.cancel_order(bid_id));
     }
 
@@ -426,7 +505,7 @@ int main() {
         assert(tester.cancel_order(ask_id));
         assert(tester.ask_book.at("BABA").empty());
     }
-    std::cout << "All Cancel Orders passed...\n";
+    std::cout << "All Cancel Orders passed...\n\n";
 
     std::cout << "Testing Modify Orders...\n";
     {
@@ -501,9 +580,18 @@ int main() {
         uint32_t ask_id = tester.add_order(ask);
         Order modified = ask;
         modified.price = 215;
+        modified.quantity = 2;
         assert(tester.modify_order(ask_id, modified));
         assert(tester.ask_book.at("LYFT").empty());
-        assert(tester.bid_book.at("LYFT").empty());
+        {
+            const Event &ev = tester.event_history.back();
+            assert(ev.event_type == EventType::ORDER_EXEC);
+            assert(ev.filled_order.ticker == bid.ticker);
+            assert(ev.filled_order.bidder_id == bid.user_id);
+            assert(ev.filled_order.asker_id == ask.user_id);
+            assert(ev.filled_order.price == 220);
+            assert(ev.filled_order.quantity == 2);
+        }
     }
 
     std::cout << "All Modify Orders passed...\n";

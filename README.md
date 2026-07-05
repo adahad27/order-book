@@ -28,7 +28,9 @@ The Core Engine will be multi-threaded. There will be one thread per ticker, bec
 ## Design Decisions and Justification
 
 **Question:** Why use event-looping over spawning a new thread per client connection?
+
 **Answer:** Event-looping was used because each connection should be relatively short-lived considering that the server should respond immediately after confirming that the order has been received. The work of inserting into the Order Book itself need not be involved to confirm order receival.
 
 **Question:** Why use message passing over conventional mutexes and locking?
-**Answer:** Message passing was used over conventional shared memory because in the author's opinion, it leads to cleaner inter-thread communication when communication is made explict as opposed to reading shared state. It also prevents issues with unlocking at the wrong moment, since threads are completely separate, there is no worry about having to "unlock".
+
+**Answer:** Message passing was used over conventional shared memory because I think it leads to cleaner inter-thread communication when communication is made explict as opposed to reading shared memory which is implicit. It also prevents issues with unlocking at the wrong moment, since threads are completely separate, there is no worry about having to "unlock". This way everything can be written like it was single-threaded code which is much easier to reason about.

@@ -5,6 +5,7 @@
 #include "types.h"
 #include <list>
 #include <map>
+#include <vector>
 #include "ledger.h"
 
 
@@ -18,13 +19,16 @@ public:
 
     std::unordered_map<uint32_t, OrderEntry> &outstanding_orders; //need to use smart pointers here
 
+    std::vector<Event> &event_history;
+
     Ledger &m_book;
 
     Tester(Ledger &book) : 
     m_book(book),
     bid_book(book.bid_book),
     ask_book(book.ask_book),
-    outstanding_orders(book.outstanding_orders) {
+    outstanding_orders(book.outstanding_orders),
+    event_history(book.event_history) {
 
     }
 

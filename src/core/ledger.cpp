@@ -25,13 +25,10 @@ void Ledger::resolve_order(auto &book, Order &order) {
         */
         double price = book[order.ticker].begin()->first;
         std::list<Order> &order_queue = book[order.ticker].begin()->second;
-        if(order_queue.empty()) {
-            book[order.ticker].erase(price);
-            return;
-        }
-        
+                
         FilledOrder filled_order;
         filled_order.ticker = order.ticker;
+        filled_order.user_id = order.user_id;
 
         if(order.order_type == OrderType::BID) {
             filled_order.bidder_id = order.user_id;
@@ -61,6 +58,11 @@ void Ledger::resolve_order(auto &book, Order &order) {
             order_queue.front().quantity -= order.quantity;            
             order.quantity = 0;
             
+        }
+
+        if(order_queue.empty()) {
+            book[order.ticker].erase(price);
+            return;
         }
     }
     
@@ -166,12 +168,13 @@ bool Ledger::modify_order(uint32_t order_id, Order order) {
     Then we must insert a new order with the modified price into the
     order book.
     */
+    outstanding_orders[order_id].entry->quantity = order.quantity;
     if(order.price != outstanding_orders[order_id].entry->price) {
         cancel_order(order_id);
         add_order_id(order, order_id);
 
     }
-    outstanding_orders[order_id].entry->quantity = order.quantity;
+    
 
     return true;
 

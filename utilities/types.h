@@ -40,6 +40,7 @@ struct Order {
 
 struct FilledOrder {
     std::string ticker;
+    std::string user_id;
     std::string bidder_id;
     std::string asker_id;
     uint32_t bid_order_id;
@@ -64,12 +65,12 @@ struct Event {
     FilledOrder filled_order;
 };
 
-inline bool operator==(Order &order_l, Order &order_r) {
+inline bool operator==(const Order &order_l, const Order &order_r) {
     return (
         order_l.ticker == order_r.ticker &&
         order_l.user_id == order_r.user_id &&
         order_l.order_type == order_r.order_type &&
-        order_l.order_subtype == order_l.order_subtype &&
+        order_l.order_subtype == order_r.order_subtype &&
         order_l.price == order_r.price &&
         order_l.quantity == order_r.quantity
     );
