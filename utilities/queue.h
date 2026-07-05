@@ -2,6 +2,9 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <deque>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 template <typename T>
 class Queue {
@@ -59,5 +62,48 @@ class Queue {
         if (data) {
             delete[] data;
         }
+    }
+};
+
+template <typename T>
+class WaitQueue {
+private:
+    std::deque<T> queue;
+    boost::mutex m;
+    boost::condition_variable cv;
+    
+
+public:
+
+    void push_back(const T& v) {
+        boost::unique_lock<boost::mutex> lock(m);
+        queue.push_back(v);
+        cv.notify_one();
+    }
+
+    T pop_front() {
+        boost::unique_lock<boost::mutex> lock(m);
+        while(queue.empty()) {
+            cv.wait(lock);
+        }
+
+        T val = queue.front();
+        queue.pop_front();
+        return val;
+    }
+
+    const T& front() {
+        boost::unique_lock<boost::mutex> lock(m);
+        return queue.front();
+    }
+
+    const T& back() {
+        boost::unique_lock<boost::mutex> lock(m);
+        return queue.back();
+    }
+
+    uint32_t size() {
+        boost::unique_lock<boost::mutex> lock(m);
+        return queue.size();
     }
 };

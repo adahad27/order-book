@@ -50,9 +50,15 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     double price{order.price};
     uint32_t id;
     if(order_id.has_value()) {
+        /*
+        This code path is only triggered when doing a modify.
+        Therefore, a response is not pushed from this function
+        when called as a helper from modify.
+        */
         id = order_id.value();
     } else {
         id = global_order_id++;
+        m_resp_queue.push_back(id);
     }
 
     auto execute_order = [&](auto &home_book, auto &counter_book, std::function<bool(double, double)> compare) {
@@ -86,15 +92,11 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     return id;
 }
 
-uint32_t Ledger::add_order(Order order) {
-    return add_order_id(order, std::optional<uint32_t>{});
+void Ledger::add_order(Order order) {
+    add_order_id(order, std::optional<uint32_t>{});
 }
 
-bool Ledger::cancel_order(uint32_t order_id) {
-    if(!outstanding_orders.contains(order_id)) {
-        return false;
-    }
-
+void Ledger::cancel_order_helper(uint32_t order_id) {
     Order &order = *(outstanding_orders[order_id].entry);
 
     if(outstanding_orders[order_id].entry_list->second.size() == 1) {
@@ -110,13 +112,26 @@ bool Ledger::cancel_order(uint32_t order_id) {
     
     
     outstanding_orders.erase(order_id);
-    
-    return true;
 }
 
-bool Ledger::modify_order(uint32_t order_id, Order order) {
+void Ledger::cancel_order(uint32_t order_id) {
     if(!outstanding_orders.contains(order_id)) {
-        return false;
+        m_resp_queue.push_back(false);
+        return;
+    } else {
+        m_resp_queue.push_back(true);
+    }
+
+    cancel_order_helper(order_id);
+    
+}
+
+void Ledger::modify_order(uint32_t order_id, Order order) {
+    if(!outstanding_orders.contains(order_id)) {
+        m_resp_queue.push_back(false);
+        return;
+    } else {
+        m_resp_queue.push_back(true);
     }
 
     /*
@@ -133,11 +148,27 @@ bool Ledger::modify_order(uint32_t order_id, Order order) {
     outstanding_orders[order_id].entry->quantity = order.quantity;
 
 
-    return true;
 }
 
 void Ledger::print_events() {
     for(uint64_t i = 0; i < event_history.size(); ++i) {
         std::cout <<"Event " << i << ": " << event_history[i];
+    }
+}
+
+void Ledger::start_loop() {
+    while(true) {
+        Job job = m_req_queue.pop_front();
+        switch(job.job_type) {
+            case JobType::ADD:
+                add_order(job.order);
+                break;
+            case JobType::CANCEL:
+                cancel_order(job.order_id);
+                break;
+            case JobType::MODIFY:
+                modify_order(job.order_id, job.order);
+                break;
+        }
     }
 }

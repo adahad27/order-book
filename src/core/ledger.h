@@ -8,6 +8,8 @@
 #include <optional>
 #include <functional>
 #include <deque>
+#include "queue.h"
+#include "boost/thread.hpp"
 
 
 class Ledger {
@@ -22,24 +24,36 @@ private:
 
     uint32_t global_order_id;
 
+    WaitQueue<Job> &m_req_queue;
+    WaitQueue<uint32_t> &m_resp_queue;
+
     uint32_t add_order_id(Order order, std::optional<uint32_t> order_id);
+
+    void cancel_order_helper(uint32_t order_id);
+
+    void start_loop();
+
+    void add_order(Order order);
+
+    void cancel_order(uint32_t order_id);
+
+    //Only able to change price/quantity
+    void modify_order(uint32_t order_id, Order order);
 
 public:
 
-    Ledger() : global_order_id(0) {
+    Ledger() = delete;
 
+    Ledger(WaitQueue<Job> &req_queue, WaitQueue<uint32_t> &resp_queue) : 
+    global_order_id(0), m_req_queue(req_queue), m_resp_queue(resp_queue) {
+
+        boost::thread engine_thread{&Ledger::start_loop, this};
     }
 
     
 
-    uint32_t add_order(Order order);
-
+    //TODO: Move this to another piece of code
     void print_events();
-
-    bool cancel_order(uint32_t order_id);
-
-    //Only able to change price/quantity
-    bool modify_order(uint32_t order_id, Order order);
 
     const Order& get_best_ask() const;
 

@@ -10,8 +10,12 @@
 #include <vector>
 #include <fcntl.h>
 #include <iostream>
+#include <deque>
 
-Ledger book;
+WaitQueue<Job> req_queue;
+WaitQueue<uint32_t> resp_queue;
+
+Ledger book(req_queue, resp_queue);
 
 const uint32_t port = 8080;
 const uint32_t MAX_MSG_LEN = 1000;
@@ -139,48 +143,54 @@ void process_request(Connection_State &state) {
 
     const std::string &command = arguments[0];
 
+    Job job;
+
     if(command == "add") {
-        Order order;
-        if(!build_order(arguments, 1, order)) {
+        job.job_type = JobType::ADD;
+        if(!build_order(arguments, 1, job.order)) {
             append_response(state, "ERROR: invalid add arguments\n");
             return;
         }
-        uint32_t order_id = book.add_order(order);
-        append_response(state, "ORDER_ADDED:" + std::to_string(order_id));
+        req_queue.push_back(job);
+        uint32_t id = resp_queue.pop_front();
+        append_response(state, "ORDER_ADDED:" + std::to_string(id));
     }
     else if(command == "cancel") {
+        job.job_type = JobType::CANCEL;
         if(arguments.size() != 2) {
             append_response(state, "ERROR: cancel requires order_id\n");
             return;
         }
-        uint32_t order_id = 0;
+        job.order_id = 0;
         try {
-            order_id = static_cast<uint32_t>(std::stoul(arguments[1]));
+            job.order_id = static_cast<uint32_t>(std::stoul(arguments[1]));
         } catch(...) {
             append_response(state, "ERROR: invalid order_id\n");
             return;
         }
-        bool ok = book.cancel_order(order_id);
+        req_queue.push_back(job);
+        bool ok = resp_queue.pop_front();
         append_response(state, ok ? "ORDER_CANCELLED" : "ORDER_NOT_FOUND");
     }
     else if(command == "modify") {
+        job.job_type = JobType::MODIFY;
         if(arguments.size() != 8) {
             append_response(state, "ERROR: modify requires order_id and full order fields\n");
             return;
         }
-        uint32_t order_id = 0;
+        job.order_id = 0;
         try {
-            order_id = static_cast<uint32_t>(std::stoul(arguments[1]));
+            job.order_id = static_cast<uint32_t>(std::stoul(arguments[1]));
         } catch(...) {
             append_response(state, "ERROR: invalid order_id\n");
             return;
         }
-        Order order;
-        if(!build_order(arguments, 2, order)) {
+        if(!build_order(arguments, 2, job.order)) {
             append_response(state, "ERROR: invalid modify arguments\n");
             return;
         }
-        bool ok = book.modify_order(order_id, order);
+        req_queue.push_back(job);
+        bool ok = resp_queue.pop_front();
         append_response(state, ok ? "ORDER_MODIFIED" : "ORDER_NOT_FOUND");
     }
     else {
@@ -328,8 +338,8 @@ void run_server(int fd) {
                 delete_connection(i, connections, states);
                 close(socket_fd);
                 std::cout << "Connection closed on socket: " << socket_fd << std::endl;
-                // std::cout << "Current history is: " << std::endl;
-                // book.print_events();
+                std::cout << "Current history is: " << std::endl;
+                book.print_events();
             }
         }
 
