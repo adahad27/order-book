@@ -27,10 +27,21 @@ The Core Engine will be multi-threaded. There will be one thread per ticker, bec
 
 ## Design Decisions and Justification
 
-**Question:** Why use event-looping over spawning a new thread per client connection?
+**Question 1:** Why use event-looping over spawning a new thread per client connection?
 
 **Answer:** Event-looping was used because each connection should be relatively short-lived considering that the server should respond immediately after confirming that the order has been received. The work of inserting into the Order Book itself need not be involved to confirm order receival.
 
-**Question:** Why use message passing over conventional mutexes and locking?
+
+**Question 2:** Why use message passing over conventional mutexes and locking?
 
 **Answer:** Message passing was used over conventional shared memory because I think it leads to cleaner inter-thread communication when communication is made explict as opposed to reading shared memory which is implicit. It also prevents issues with unlocking at the wrong moment, since threads are completely separate, there is no worry about having to "unlock". This way everything can be written like it was single-threaded code which is much easier to reason about.
+
+
+**Question 3:** Why use a memory pool?
+
+**Answer:** Heap allocation is slow and so we want to avoid heap allocation in our hot path if possible, specifically when malloc/free must be called many times. There are two types of heap allocation that were not reduced in this project:
+
+1. When an unseen ticker has an order sent for it, at that point, a new book specifically for that ticker must be produced, and at the time of writing, I am assuming that the number of tickers is unknown therefore this cost must be paid. A production system would know how many tickers exist in the market and what each ticker is, so this could also be turned into a one-time heap allocation as opposed to having to allocate books per ticker dynamically.
+
+2. The startup cost of actually allocating the pool must be paid. Since this memory can't be stack-allocated, the only two other reasonable places to do it would be in the static section of memory and the heap. I wanted to leave the pool flexible in how many objects can be allocated, so I opted to create the pool on the heap.
+

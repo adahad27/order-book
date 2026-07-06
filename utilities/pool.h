@@ -8,6 +8,13 @@ private:
     T **free_list;
     uint32_t num_obj;
     
+    /*
+    TODO:
+    Could use an unsigned integer offset, the offset
+    directly represents which element you want, so
+    an offset of 1 would mean the first element, so on
+    and so forth.
+    */
     T **list_top;
 
 public:
