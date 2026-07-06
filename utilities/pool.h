@@ -4,8 +4,11 @@
 template <typename T>
 class Pool {
 private:
-    uint8_t *data;
+    T *data;
+    T **free_list;
     uint32_t num_obj;
+    
+    T **list_top;
 
 public:
 
@@ -14,9 +17,9 @@ public:
 
     Pool(uint32_t num_objects);
 
-    uint8_t* alloc_obj();
+    T* alloc_obj();
 
-    void free_obj(uint8_t*& obj);
+    void free_obj(T*& obj);
 
     ~Pool();
 };

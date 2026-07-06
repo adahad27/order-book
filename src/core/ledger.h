@@ -10,6 +10,7 @@
 #include <deque>
 #include "queue.h"
 #include "boost/thread.hpp"
+#include "pool.h"
 
 class Tester;
 
