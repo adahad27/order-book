@@ -5,6 +5,7 @@
 #include <deque>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
+#include <stdexcept>
 
 template <typename T>
 class Queue {
@@ -62,6 +63,46 @@ class Queue {
         if (data) {
             delete[] data;
         }
+    }
+};
+
+template <typename T>
+class LocklessQueue {
+private:
+
+    T* data;
+    uint32_t _capacity;
+    uint32_t _size;
+    uint32_t head;
+    uint32_t tail;
+
+public:
+
+    LocklessQueue(uint32_t capacity) : _capacity(capacity) {
+        if(capacity == 0) {
+            throw std::runtime_error("Cannot have queue of capacity 0");
+        }
+        data = new T[capacity];
+    }
+
+    void push_back(const T& v) {
+
+    }
+
+    void pop_front() {
+
+    }
+
+    const T& back() {
+
+    }
+
+    const T& front() {
+
+    }
+
+    ~LocklessQueue {
+        delete[] data;
     }
 };
 
