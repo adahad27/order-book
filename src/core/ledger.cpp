@@ -30,6 +30,7 @@ void Ledger::resolve_order(auto &book, Order &order) {
         filled_order.ticker = order.ticker;
         filled_order.user_id = order.user_id;
 
+        //TODO: Maybe try replacing this with template function?
         if(order.order_type == OrderType::BID) {
             filled_order.bidder_id = order.user_id;
             filled_order.asker_id = order_queue.front().user_id;

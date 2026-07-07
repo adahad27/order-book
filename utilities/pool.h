@@ -22,11 +22,54 @@ public:
     //Must pass in number of objects to allocate at construction time
     Pool() = delete;
 
-    Pool(uint32_t num_objects);
+    Pool(uint32_t num_objects) : num_obj(num_objects) {
+        data = new T[num_objects];
+        if(!data) {
+            throw std::runtime_error("Unable to allocate Pool on heap");
+        }
+        free_list = new T*[num_objects];
+        if(!free_list) {
+            throw std::runtime_error("Unable to allocate Free List on heap");
+        }
+        //Instantiate free_list
+        for(uint32_t i = 0; i < num_obj; ++i) {
+            free_list[i] = data + i;
+        }
 
-    T* alloc_obj();
+        list_top = free_list + num_obj - 1;
+    }
 
-    void free_obj(T*& obj);
+    T* alloc_obj() {
+        if(list_top < free_list) {
+            return nullptr;
+        }
+        return *list_top--;
+    }
 
-    ~Pool();
+    uint32_t get_available() {
+        if(list_top < free_list) {
+            return 0;
+        }
+        return list_top - free_list + 1;
+    }
+
+    void free_obj(T*& obj) {
+        //Must confirm that passed in pointer belongs to our pool
+        if(obj < data || obj >= data + num_obj) {
+            return;
+        }
+
+        *++list_top = obj;
+        obj = nullptr;
+    }
+
+    ~Pool() {
+        //Reset free-list before we delete everything
+        for(uint32_t i = 0; i < num_obj; ++i) {
+            free_list[i] = data + i;
+        }
+        delete[] free_list;
+        delete[] data;
+        
+    }
 };

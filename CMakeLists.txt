@@ -7,6 +7,7 @@ find_package(Boost REQUIRED COMPONENTS thread)
 
 add_executable(server src/server/server.cpp)
 add_executable(tester tests/tester.cpp)
+add_executable(pool tests/test_pool.cpp)
 
 add_subdirectory(src)
 add_subdirectory(utilities)
