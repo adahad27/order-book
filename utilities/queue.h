@@ -119,11 +119,13 @@ private:
 
 public:
 
+    LocklessQueue() = delete;
+
     LocklessQueue(uint32_t capacity) : data(capacity) {
         if(capacity == 0) {
             throw std::runtime_error("Cannot have queue of capacity 0");
         } else if (capacity & (capacity - 1) != 0) {
-            throw std::runtime_error("Must set queue to have capacity of power of 2")
+            throw std::runtime_error("Must set queue to have capacity of power of 2");
         }
     }
 

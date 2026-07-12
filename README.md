@@ -7,12 +7,12 @@ This project was started in May 2026. The intent of this project is to build a o
 3. Matching Engine uses Price-Time matching
 4. Event-Driven server architecture
 5. Memory Pools
+6. Lock Free Single Producer Single Consumer Queue
 
 ### Planned Items and Implementation Specific Details:
-1. Lock Free Single Producer Single Consumer Queue
-2. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
-3. Memory Optimization tricks like Intrusive Linked Lists
-4. Add persistence logging in case of machine-crashes
+1. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
+2. Memory Optimization tricks like Intrusive Linked Lists
+3. Add persistence logging in case of machine-crashes
 
 ## Architecture Description:
 There are two major components in this project:

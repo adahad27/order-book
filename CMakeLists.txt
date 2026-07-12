@@ -8,6 +8,7 @@ find_package(Boost REQUIRED COMPONENTS thread)
 add_executable(server src/server/server.cpp)
 add_executable(tester tests/tester.cpp)
 add_executable(pool tests/test_pool.cpp)
+add_executable(queue tests/test_queue.cpp)
 
 add_subdirectory(src)
 add_subdirectory(utilities)
@@ -15,3 +16,4 @@ add_subdirectory(tests)
 
 target_link_libraries(server Boost::thread)
 target_link_libraries(tester Boost::thread)
+target_link_libraries(queue Boost::thread)
