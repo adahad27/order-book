@@ -138,10 +138,10 @@ public:
         }
 
         //This line is equivalent to tail = tail % data.size()
-        tail = tail & (data.size() >> 1);
+        uint64_t candidate_tail = tail & (data.size() - 1);
 
         //Write element to buffer
-        data.emplace(tail, v);
+        data[candidate_tail] = std::move(v);
 
         //Commit the write
         m_tail.store(tail + 1, std::memory_order_release);
@@ -149,7 +149,23 @@ public:
         return true;
     }
 
-    T read() {
+    std::optional<T> read() {
+        //Load the head/tail atomically with memory_order_acquire
+        uint64_t tail = m_tail.load(std::memory_order_acquire);
+        uint64_t head = m_head.load(std::memory_order_acquire);
+
+        if(tail == head) {
+            return std::nullopt; //Queue is empty
+        }
+
+        uint64_t candidate_head = head & (data.size() - 1);
+
+
+        T read_val = data[candidate_head];
+
+        m_head.store(head + 1, std::memory_order_release);
+
+        return read_val;
 
     }
 
