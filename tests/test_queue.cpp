@@ -3,14 +3,22 @@
 #include <cassert>
 #include <iostream>
 #include <boost/thread.hpp>
+#include <random>
 
-LocklessQueue<int> q(8);
+SPSCQueue<int> q(8);
 
 constexpr uint64_t ITERATIONS = 1e+9;
+constexpr uint8_t YIELD_PERCENTAGE = 5;
 
 void producer() {
-    for(uint64_t i = 0; i < ITERATIONS; ++i) {
-        while(!q.write(i)) {}
+    for(uint64_t i = 0; i < ITERATIONS;) {
+        if(q.write(i)) {
+            i++;
+        }
+        uint8_t percentage = rand() % 100;
+        if(0 <= percentage && percentage < YIELD_PERCENTAGE) {
+            boost::this_thread::yield();
+        }
     }
 }
 
@@ -26,6 +34,10 @@ void consumer() {
                 assert(false);
             }
             expected++;
+        }
+        uint8_t percentage = rand() % 100;
+        if(0 <= percentage && percentage < YIELD_PERCENTAGE) {
+            boost::this_thread::yield();
         }
     }
 }
@@ -105,7 +117,7 @@ int main() {
 
     std::cout << "TEST PASSED: Testing wrap around for queue...\n";
 
-    std::cout << "TESTING MULTIPLE THREADS\n";
+    std::cout << "TESTING SINGLE PRODUCER SINGLE CONSUMER IMPLEMENTATION FOR SPSC Queue\n";
 
     boost::thread producer_thread{producer};
     boost::thread consumer_thread{consumer};

@@ -109,7 +109,7 @@ to get reordered before. So when reading the head/tail pointers, that load must 
 
 */
 template <typename T>
-class LocklessQueue {
+class SPSCQueue {
 private:
 
     std::vector<T> data;
@@ -119,9 +119,9 @@ private:
 
 public:
 
-    LocklessQueue() = delete;
+    SPSCQueue() = delete;
 
-    LocklessQueue(uint32_t capacity) : data(capacity) {
+    SPSCQueue(uint32_t capacity) : data(capacity) {
         if(capacity == 0) {
             throw std::runtime_error("Cannot have queue of capacity 0");
         } else if (capacity & (capacity - 1) != 0) {

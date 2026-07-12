@@ -13,6 +13,7 @@ This project was started in May 2026. The intent of this project is to build a o
 1. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
 2. Memory Optimization tricks like Intrusive Linked Lists
 3. Add persistence logging in case of machine-crashes
+4. Migrating Price Levels from using Sorted Trees to using 
 
 ## Architecture Description:
 There are two major components in this project:
@@ -46,3 +47,7 @@ The Core Engine will be multi-threaded. There will be one thread per ticker, bec
 
 2. The startup cost of actually allocating the pool must be paid. Since this memory can't be stack-allocated, the only two other reasonable places to do it would be in the static section of memory and the heap. I wanted to leave the pool flexible in how many objects can be allocated, so I opted to create the pool on the heap.
 
+
+**Question 4:** Did you benchmark a regular queue protected by a mutex before deciding to implement an SPSC queue?
+
+**Answer:** No I did not. I think that the general engineering advice of turning towards a more complicated solution only if the simpler solution is true, however I wanted to implement an SPSC queue for the learning experience of being able to write code that exploits atomics and memory ordering. I do have plans in the future of measuring the latency of each, but that would be when directly testing the order book against something that simulates market data. At the time of implementation of the SPSC queue, the infrastructure of testing the order book against simulated market data had not been implemented.
