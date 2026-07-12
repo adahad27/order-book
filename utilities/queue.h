@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <vector>
 #include <atomic>
+#include <optional>
 
 template <typename T>
 class Queue {
@@ -91,14 +92,14 @@ Consider the alternative, which is to write/read the data before updating the po
 Writing an element to the tail pointer:
 Writing the data and then atomically updating the tail pointer, so consider the situation where
 we are partially done writing the data, and the consumer tries reading, well since we haven't
-updated our head, the read could never consume the element that we are currently writing to
+updated our tail, the read could never consume the element that we are currently writing to
 as long as reads/writes don't get reordered. To ensure the ordering, we must have that our store
 on the tail pointer is a Memory_Order_Release.
 
 Reading an element from the head pointer:
 Reading the data and then atomically updating the head pointer, so again consider the situation
 where we are partially done reading the data, and the producer tries writing, since we haven't
-updated our tail, the write could never occur on the element that we are trying to read on. Again
+updated our head, the write could never occur on the element that we are trying to read on. Again
 to ensure the ordering, we must have that our store on the head pointer is a Memory_Order_Release.
 
 Now before we start doing operations we must confirm where the head and tail pointers are, so we
@@ -113,8 +114,8 @@ private:
 
     std::vector<T> data;
 
-    alignas(64) uint64_t head;
-    alignas(64) uint64_t tail;
+    alignas(64) std::atomic<uint64_t> m_head;
+    alignas(64) std::atomic<uint64_t> m_tail;
 
 public:
 
@@ -126,8 +127,26 @@ public:
         }
     }
 
-    void write(const T& v) {
-        
+    bool write(const T& v) {
+
+        //Load the head/tail atomically with memory_order_acquire
+        uint64_t tail = m_tail.load(std::memory_order_acquire);
+        uint64_t head = m_head.load(std::memory_order_acquire);
+
+        if(tail - head >= data.size()) {
+            return false; //Queue is full
+        }
+
+        //This line is equivalent to tail = tail % data.size()
+        tail = tail & (data.size() >> 1);
+
+        //Write element to buffer
+        data.emplace(tail, v);
+
+        //Commit the write
+        m_tail.store(tail + 1, std::memory_order_release);
+
+        return true;
     }
 
     T read() {
