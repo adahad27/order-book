@@ -6,6 +6,8 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <stdexcept>
+#include <vector>
+#include <atomic>
 
 template <typename T>
 class Queue {
@@ -65,45 +67,74 @@ class Queue {
         }
     }
 };
+/*
+Queue Design:
 
+We are going to keep two different pointers, the head pointer and the tail pointer.
+These pointers are going to point at the nex valid location to read and write from.
+
+
+Writing:
+We cannot move the tail pointer until we are completely done with our write.
+If we move our tail pointer first and then try writing, then in between those two events,
+the consumer can read, it will see the tail pointer has moved, and will assume that the
+value at tail is valid even though the write is incomplete.
+
+Reading:
+Consider a similar situation, but this time it would happen in a slightly different case where
+the write has wrapped around the back of the buffer. If you update your head pointer first
+before completing the read, the write will see there is a free space and attempt to write to
+that spot in the buffer corrupting the read in progress.
+
+Consider the alternative, which is to write/read the data before updating the pointer.
+
+Writing an element to the tail pointer:
+Writing the data and then atomically updating the tail pointer, so consider the situation where
+we are partially done writing the data, and the consumer tries reading, well since we haven't
+updated our head, the read could never consume the element that we are currently writing to
+as long as reads/writes don't get reordered. To ensure the ordering, we must have that our store
+on the tail pointer is a Memory_Order_Release.
+
+Reading an element from the head pointer:
+Reading the data and then atomically updating the head pointer, so again consider the situation
+where we are partially done reading the data, and the producer tries writing, since we haven't
+updated our tail, the write could never occur on the element that we are trying to read on. Again
+to ensure the ordering, we must have that our store on the head pointer is a Memory_Order_Release.
+
+Now before we start doing operations we must confirm where the head and tail pointers are, so we
+will have to read those variables. We cannot allow for any read/write operations after those reads
+to get reordered before. So when reading the head/tail pointers, that load must be Memory_Order_Acquire.
+
+
+*/
 template <typename T>
 class LocklessQueue {
 private:
 
-    T* data;
-    uint32_t _capacity;
-    uint32_t _size;
-    uint32_t head;
-    uint32_t tail;
+    std::vector<T> data;
+
+    alignas(64) uint64_t head;
+    alignas(64) uint64_t tail;
 
 public:
 
-    LocklessQueue(uint32_t capacity) : _capacity(capacity) {
+    LocklessQueue(uint32_t capacity) : data(capacity) {
         if(capacity == 0) {
             throw std::runtime_error("Cannot have queue of capacity 0");
+        } else if (capacity & (capacity - 1) != 0) {
+            throw std::runtime_error("Must set queue to have capacity of power of 2")
         }
-        data = new T[capacity];
     }
 
-    void push_back(const T& v) {
-
+    void write(const T& v) {
+        
     }
 
-    void pop_front() {
-
-    }
-
-    const T& back() {
+    T read() {
 
     }
 
-    const T& front() {
 
-    }
-
-    ~LocklessQueue {
-        delete[] data;
-    }
 };
 
 template <typename T>

@@ -1,16 +1,17 @@
 ## Brief Summary and Future Plans
 This project was started in May 2026. The intent of this project is to build a order-book that can function as an exchange. This project assumes that the underlying security is a regular stock that can be represented with a ticker symbol.
 
-### Supported Items:
+### Supported Items and Implementation Specific Details:
 1. Support for Limit Orders, Market Orders
 2. Order cancellation/modification
 3. Matching Engine uses Price-Time matching
 4. Event-Driven server architecture
+5. Memory Pools
 
-### Planned Items:
+### Planned Items and Implementation Specific Details:
 1. Lock Free Single Producer Single Consumer Queue
 2. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
-3. Memory Optimization tricks like Intrusive Linked Lists and Memory Pools
+3. Memory Optimization tricks like Intrusive Linked Lists
 4. Add persistence logging in case of machine-crashes
 
 ## Architecture Description:
