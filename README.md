@@ -1,5 +1,5 @@
 ## Brief Summary and Future Plans
-This project was started in May 2026. The intent of this project is to build a order-book that can function as an exchange. This project assumes that the underlying security is a regular stock that can be represented with a ticker symbol.
+This project was started in May 2026. The intent of this project is to build a order-book that can replicate an exchange order-book given incoming order-flow. This project assumes that the underlying security is a regular stock that can be represented with a ticker symbol. This project will also be tested using a NASDAQ-ITCH sample dataset. As of right now, this dataset will only be used to test the correctness of the system and not concurrency. The dataset can be downloaded from [here](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/01302019.NASDAQ_ITCH50.gz). The dataset was also isolated specifically for the AAPL ticker using a python script.
 
 ### Supported Items and Implementation Specific Details:
 1. Support for Limit Orders, Market Orders
@@ -50,4 +50,4 @@ The Core Engine will be multi-threaded. There will be one thread per ticker, bec
 
 **Question 4:** Did you benchmark a regular queue protected by a mutex before deciding to implement an SPSC queue?
 
-**Answer:** No I did not. I think that the general engineering advice of turning towards a more complicated solution only if the simpler solution is true, however I wanted to implement an SPSC queue for the learning experience of being able to write code that exploits atomics and memory ordering. I do have plans in the future of measuring the latency of each, but that would be when directly testing the order book against something that simulates market data. At the time of implementation of the SPSC queue, the infrastructure of testing the order book against simulated market data had not been implemented.
+**Answer:** No I did not. I think that the general engineering advice of turning towards a more complicated solution only if the simpler solution is lacking is true, however I wanted to implement an SPSC queue for the learning experience of being able to write code that exploits atomics and memory ordering. I do have plans in the future of measuring the latency of each, but that would be when directly testing the order book against something that simulates market data. At the time of implementation of the SPSC queue, the infrastructure of testing the order book against simulated market data had not been implemented.
