@@ -30,6 +30,8 @@ Supporting:
 [] operator -> support insertion if not existing, support access if existing
 .find() -> support access if existing
 
+.at() -> support access but with bounds checking
+(mostly to maintain backward compatibility with testing)
 
 
 
@@ -68,25 +70,53 @@ public:
     data((upper_bound - lower_bound)/tick), bitset((upper_bound - lower_bound)/(8*tick)) {}
 
     
-    
+    //TODO: use Concepts to force template specialization for T object to have .clear() function?
     void erase(double price) {
         //set bitmask off, don't deallocate memory
+        size_t idx = (price - exp_lower) / tick_size;
+        byte chunk = idx >> 3; //divide by 8
+        byte offset = idx & ((1 << 3) - 1); //find modulo 8
+        bitset[chunk] = bitset[chunk] & !(1 << offset); //mark as false
+
+        //TODO: update best_rest_ptr if necessary here
     }
 
     T& operator[](double price) {
-        //check if price exists, if not allocate
-        //then return value
+        //safe to just return value because vector should have default initialized it
+        size_t idx = (price - exp_lower) / tick_size;
+        byte chunk = idx >> 3;
+        byte offset = idx & ((1 << 3) - 1);
+        bitset[chunk] = bitset[chunk] | (1 << offset); //mark as true
+
+        if(
+            (sort_type == SortType::ASCENDING && idx > best_rest_ptr) || 
+            (sort_type == SortType::DESCENDING && idx < best_rest_ptr)) {
+            best_rest_ptr = idx;
+        }
+
+        return data[idx].second;
     }
 
     std::pair<double, T>* begin() {
         //return object at the top of the book
+        return data.data() + best_rest_ptr;
     }
 
     std::pair<double, T>* find(double price) {
-        //return object pointed to by this price using bin search?
+        //return object pointed to by this price
+
+        size_t idx = (price - exp_lower) / tick_size;
+
+        return data.data() + idx;
     }
 
+    T& at(double price) {
+        //return value pointed to by this price if it exists
 
+        size_t idx = (price - exp_lower) / tick_size;
+
+        return data[idx].second;
+    }
 
 
 
