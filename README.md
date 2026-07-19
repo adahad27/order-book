@@ -1,5 +1,5 @@
 ## Brief Summary and Future Plans
-This project was started in May 2026. The intent of this project is to build a order-book that can replicate an exchange order-book given incoming order-flow. This project assumes that the underlying security is a regular stock that can be represented with a ticker symbol. This project will also be tested using a NASDAQ-ITCH sample dataset. As of right now, this dataset will only be used to test the correctness of the system and not concurrency. The dataset can be downloaded from [here](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/01302019.NASDAQ_ITCH50.gz). The dataset was also isolated specifically for the AAPL ticker using a python script.
+This project was started in May 2026. The intent of this project is to build a order-book that can replicate an exchange order-book given incoming order-flow. This project assumes that the underlying security is a regular stock that can be represented with a ticker symbol.
 
 ### Supported Items and Implementation Specific Details:
 1. Support for Limit Orders, Market Orders
@@ -13,7 +13,7 @@ This project was started in May 2026. The intent of this project is to build a o
 1. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
 2. Memory Optimization tricks like Intrusive Linked Lists
 3. Add persistence logging in case of machine-crashes
-4. Migrating Price Levels from using Sorted Trees to using 
+4. Migrating Price Levels from using Sorted Trees to using Flat Arrays
 
 ## Architecture Description:
 There are two major components in this project:
@@ -26,6 +26,11 @@ the response queue will then be forwarded back to the user.
 
 ### Core Engine (TODO)
 The Core Engine will be multi-threaded. There will be one thread per ticker, because there is no shared state in the ask or bid books across tickers. So each request-response queue per ticker will have only one producer and one consumer.
+
+## Testing
+This project will also be tested using a NASDAQ-ITCH sample dataset. As of right now, this dataset will only be used to test the correctness of the system. The dataset can be downloaded from [here](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/01302019.NASDAQ_ITCH50.gz). The dataset was also isolated specifically for the AAPL ticker using a python script. 
+
+While concurrency testing is important, there are only a few concurrent parts of this project, namely the server front-end that handles multiple TCP connections, which end up serialized because of the event loop, and the SPSC queue between the server and the core engine. Both of these objects can be tested for concurrency independently of checking the actual Order Book for concurrent correctness, since the Order Book was written sequentially.
 
 ## Design Decisions and Justification
 
