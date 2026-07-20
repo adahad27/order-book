@@ -12,8 +12,8 @@
 #include <iostream>
 #include <deque>
 
-SPSCQueue<Job> req_queue;
-SPSCQueue<uint32_t> resp_queue;
+SPSCQueue<Job> req_queue(1 << 16);
+SPSCQueue<uint32_t> resp_queue(1 << 16);
 
 Ledger book(req_queue, resp_queue);
 
