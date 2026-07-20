@@ -84,7 +84,7 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
         id = order_id.value();
     } else {
         id = global_order_id++;
-        m_resp_queue.push_back(id);
+        m_resp_queue.write(id);
     }
 
     order.order_id = id;
@@ -144,10 +144,10 @@ void Ledger::cancel_order_helper(uint32_t order_id) {
 
 bool Ledger::cancel_order(uint32_t order_id) {
     if(!outstanding_orders.contains(order_id)) {
-        m_resp_queue.push_back(false);
+        m_resp_queue.write(false);
         return false;
     } else {
-        m_resp_queue.push_back(true);
+        m_resp_queue.write(true);
     }
 
     cancel_order_helper(order_id);
@@ -157,10 +157,10 @@ bool Ledger::cancel_order(uint32_t order_id) {
 
 bool Ledger::modify_order(uint32_t order_id, Order order) {
     if(!outstanding_orders.contains(order_id)) {
-        m_resp_queue.push_back(false);
+        m_resp_queue.write(false);
         return false;
     } else {
-        m_resp_queue.push_back(true);
+        m_resp_queue.write(true);
     }
 
     /*
@@ -189,7 +189,15 @@ void Ledger::print_events() {
 
 void Ledger::start_loop() {
     while(true) {
-        Job job = m_req_queue.pop_front();
+        /*
+        Busy waiting is better than sleeping the CPU here because
+        matching should be as responsive as possible even if it
+        burns CPU cycles.
+        */
+        auto wrapped_job = m_req_queue.read();
+        if(!wrapped_job.has_value()) continue;
+        Job job = wrapped_job.value();
+
         switch(job.job_type) {
             case JobType::ADD:
                 add_order(job.order);

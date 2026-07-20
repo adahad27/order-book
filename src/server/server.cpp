@@ -12,8 +12,8 @@
 #include <iostream>
 #include <deque>
 
-WaitQueue<Job> req_queue;
-WaitQueue<uint32_t> resp_queue;
+SPSCQueue<Job> req_queue;
+SPSCQueue<uint32_t> resp_queue;
 
 Ledger book(req_queue, resp_queue);
 
@@ -151,8 +151,15 @@ void process_request(Connection_State &state) {
             append_response(state, "ERROR: invalid add arguments\n");
             return;
         }
-        req_queue.push_back(job);
-        uint32_t id = resp_queue.pop_front();
+        req_queue.write(job);
+        uint32_t id;
+        while(true) {
+            auto response = resp_queue.read();
+            if(response.has_value()) {
+                id = response.value();
+                break; 
+            }
+        }
         append_response(state, "ORDER_ADDED:" + std::to_string(id));
     }
     else if(command == "cancel") {
@@ -168,8 +175,15 @@ void process_request(Connection_State &state) {
             append_response(state, "ERROR: invalid order_id\n");
             return;
         }
-        req_queue.push_back(job);
-        bool ok = resp_queue.pop_front();
+        req_queue.write(job);
+        bool ok;
+        while(true) {
+            auto response = resp_queue.read();
+            if(response.has_value()) {
+                ok = response.value();
+                break; 
+            }
+        }
         append_response(state, ok ? "ORDER_CANCELLED" : "ORDER_NOT_FOUND");
     }
     else if(command == "modify") {
@@ -189,8 +203,15 @@ void process_request(Connection_State &state) {
             append_response(state, "ERROR: invalid modify arguments\n");
             return;
         }
-        req_queue.push_back(job);
-        bool ok = resp_queue.pop_front();
+        req_queue.write(job);
+        bool ok;
+        while(true) {
+            auto response = resp_queue.read();
+            if(response.has_value()) {
+                ok = response.value();
+                break; 
+            }
+        }
         append_response(state, ok ? "ORDER_MODIFIED" : "ORDER_NOT_FOUND");
     }
     else {
