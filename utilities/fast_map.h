@@ -27,7 +27,7 @@ To find the best bid/ask we will use a pointer.
 */
 #include "pool.h"
 #include <vector>
-// #include <bitset>
+#include <stdexcept>
 
 using byte = unsigned char;
 
@@ -49,7 +49,11 @@ private:
     SortType sort_type;
     size_t _size;
     std::vector<std::vector<std::pair<double, T>>> data;
-    std::vector<byte> bitset
+    std::vector<byte> bitmap;
+
+    inline size_t calc_idx(double key);
+    inline bool get_bitmap(double key);
+    inline void set_bitmap(double key, bool bit);
 
 public:
     
@@ -57,7 +61,7 @@ public:
     FastMap(double tick, double lower_bound, double upper_bound, SortType sort) :
     tick_size(tick), exp_lower(lower_bound), exp_upper(upper_bound), _size(0), sort_type(sort),
     best_rest_ptr(nullptr), data((upper_bound - lower_bound)/tick), 
-    bitset((upper_bound - lower_bound)/(8*tick)) {}
+    bitmap((upper_bound - lower_bound)/(8*tick)) {}
 
     
     const std::pair<double, T>* begin();
@@ -75,16 +79,58 @@ public:
     bool empty();
     size_t size();
 
-    const std::pair<double, T>* insert(double key);
-    const std::pair<double, T>* emplace(double key);
-    const std::pair<double, T>* find(double key);
+    /*
+    insert() and emplace() don't make sense
+    because all of the values in the vector
+    will have been default constructed
+    already.
 
-    const T& at();
-    T& operator[]();
+    Therefore we forbid the user from inserting
+    a value. So this interface that would normally
+    be supported is not.
+    */
+    // const std::pair<double, T>* insert(double key, T value);
+    // const std::pair<double, T>* emplace(double key, T value);
+    const std::pair<double, T>* find(double key);
+    bool erase(double key);
+
+    const T& at(double key);
+    T& operator[](double key);
 
 
 
 };
+
+template <typename T>
+inline size_t FastMap<T>::calc_idx(double key) {
+    return (key - exp_lower) / tick_size;
+}
+
+template <typename T>
+inline bool FastMap<T>::get_bitmap(double key) {
+    size_t idx = calc_idx(key);
+    size_t chunk = idx >> 3;
+    byte chunk_offset = idx & (0b111);
+
+    return bitmap[chunk] & (1 << chunk_offset);
+}
+
+template <typename T>
+inline void FastMap<T>::set_bitmap(double key, bool bit) {
+    size_t idx = calc_idx(key);
+    size_t chunk = idx >> 3;
+    byte chunk_offset = idx & (0b111);
+    byte mask;
+    if(bit) {
+        // bitwise OR with all bits set to 0 except for chunk offset
+        mask = 1 << chunk_offset;
+        bitmap[chunk] |= mask;
+    } else {
+        // bitwise AND with all bits set to 1 except for chunk offset
+        mask = ~(1 << chunk_offset);
+        bitmap[chunk] &= mask;
+    }
+}
 
 /*
 Burden on user to make sure that begin()
@@ -106,3 +152,15 @@ size_t FastMap<T>::size() {
     return _size;
 }
 
+template <typename T>
+const std::pair<double, T>* FastMap<T>::find(double key) {
+    //check bitmap if value exists else return nullptr
+    return get_bitmap(key) ? data.data() + calc_idx(key) : nullptr;
+}
+
+template <typename T>
+const T& FastMap<T>::at(double key) {
+    if(get_bitmap(key)) return data[calc_idx(key)].second;
+
+    throw std::runtime_error("Key does not exist!");
+}
