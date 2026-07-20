@@ -24,18 +24,6 @@ Then our price levels would look like this:
 
 To find the best bid/ask we will use a pointer.
 
-Supporting:
-.begin() -> supporting finding the top of the book
-.erase() -> support deleting from anywhere in the book
-[] operator -> support insertion if not existing, support access if existing
-.find() -> support access if existing
-
-.at() -> support access but with bounds checking
-(mostly to maintain backward compatibility with testing)
-
-
-
-
 */
 #include "pool.h"
 #include <vector>
@@ -57,8 +45,9 @@ private:
     double tick_size;
     double exp_lower;
     double exp_upper;
-    long best_rest_ptr;
+    std::pair<double, T>* best_rest_ptr;
     SortType sort_type;
+    size_t _size;
     std::vector<std::vector<std::pair<double, T>>> data;
     std::vector<byte> bitset
 
@@ -66,58 +55,54 @@ public:
     
     FastMap() = delete;
     FastMap(double tick, double lower_bound, double upper_bound, SortType sort) :
-    tick_size(tick), exp_lower(lower_bound), exp_upper(upper_bound), sort_type(sort),
-    data((upper_bound - lower_bound)/tick), bitset((upper_bound - lower_bound)/(8*tick)) {}
+    tick_size(tick), exp_lower(lower_bound), exp_upper(upper_bound), _size(0), sort_type(sort),
+    best_rest_ptr(nullptr), data((upper_bound - lower_bound)/tick), 
+    bitset((upper_bound - lower_bound)/(8*tick)) {}
 
     
-    //TODO: use Concepts to force template specialization for T object to have .clear() function?
-    void erase(double price) {
-        //set bitmask off, don't deallocate memory
-        size_t idx = (price - exp_lower) / tick_size;
-        byte chunk = idx >> 3; //divide by 8
-        byte offset = idx & ((1 << 3) - 1); //find modulo 8
-        bitset[chunk] = bitset[chunk] & !(1 << offset); //mark as false
+    const std::pair<double, T>* begin();
+    
+    /*
+    end() not supported for now because
+    iteration over non-empty buckets is
+    a non-trivial task.
 
-        //TODO: update best_rest_ptr if necessary here
-    }
+    Disallow user from iterating by just
+    not letting them know what the end()
+    of the structure is.
+    */
+    // const std::pair<double, T>* end();
+    bool empty();
+    size_t size();
 
-    T& operator[](double price) {
-        //safe to just return value because vector should have default initialized it
-        size_t idx = (price - exp_lower) / tick_size;
-        byte chunk = idx >> 3;
-        byte offset = idx & ((1 << 3) - 1);
-        bitset[chunk] = bitset[chunk] | (1 << offset); //mark as true
+    const std::pair<double, T>* insert(double key);
+    const std::pair<double, T>* emplace(double key);
+    const std::pair<double, T>* find(double key);
 
-        if(
-            (sort_type == SortType::ASCENDING && idx > best_rest_ptr) || 
-            (sort_type == SortType::DESCENDING && idx < best_rest_ptr)) {
-            best_rest_ptr = idx;
-        }
-
-        return data[idx].second;
-    }
-
-    std::pair<double, T>* begin() {
-        //return object at the top of the book
-        return data.data() + best_rest_ptr;
-    }
-
-    std::pair<double, T>* find(double price) {
-        //return object pointed to by this price
-
-        size_t idx = (price - exp_lower) / tick_size;
-
-        return data.data() + idx;
-    }
-
-    T& at(double price) {
-        //return value pointed to by this price if it exists
-
-        size_t idx = (price - exp_lower) / tick_size;
-
-        return data[idx].second;
-    }
+    const T& at();
+    T& operator[]();
 
 
 
 };
+
+/*
+Burden on user to make sure that begin()
+points to something valid and not the
+nullptr
+*/
+template <typename T>
+const std::pair<double, T>* begin() {
+    return best_rest_ptr;
+}
+
+template <typename T>
+bool FastMap<T>::empty() {
+    return !_size;
+}
+
+template <typename T>
+size_t FastMap<T>::size() {
+    return _size;
+}
+

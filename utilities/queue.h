@@ -72,7 +72,7 @@ class Queue {
 Queue Design:
 
 We are going to keep two different pointers, the head pointer and the tail pointer.
-These pointers are going to point at the nex valid location to read and write from.
+These pointers are going to point at the next valid location to read and write from.
 
 
 Writing:
@@ -127,6 +127,25 @@ public:
         } else if (capacity & (capacity - 1) != 0) {
             throw std::runtime_error("Must set queue to have capacity of power of 2");
         }
+    }
+
+    /*
+    At the time of writing, this copy constructor is NOT thread-safe.
+    Writing a thread-safe copy constructor would take more thought as
+    the internal data structure cannot be modified while copying is
+    taking place otherwise it will lead to a corrupted copy.
+
+    A copy constructor was just included for completeness for language
+    features that are used. 
+    */
+    SPSCQueue(SPSCQueue &other) : data(other.capacity) {
+        for(size_t i = 0; i < other.data; ++i) {
+            data[i] = other.data[i];
+        }
+
+        m_head = other.m_head;
+        m_tail = other.m_tail;
+
     }
 
     bool write(const T& v) {
