@@ -5,14 +5,15 @@ NOTE:
 There is a more optimal way of designing this class, where instead of
 representing both the bid book and the ask book separately, they are represented
 in the same map, and pointers are used to distinguish the tops of the books.
-I wrote this as a drop in replacement because I wanted to swap the implementations
-in and out to benchmark them against each other
+I wrote this as a drop in replacement because I wanted to swap the
+implementations in and out to benchmark them against each other
 
 So this class was intended to be a drop in replacement for std::map.
 
 
 
-Instead of using an RB tree, it instead uses a flat array for better cache locality.
+Instead of using an RB tree, it instead uses a flat array for better cache
+locality.
 
 There is a granularity of tick-size, where we statically map all possible prices
 over the tick-size.
@@ -25,22 +26,16 @@ Then our price levels would look like this:
 To find the best bid/ask we will use a pointer.
 
 */
-#include "pool.h"
-#include <vector>
 #include <stdexcept>
+#include <vector>
+#include "pool.h"
 
 using byte = unsigned char;
 
 template <typename T>
 class FastMap {
-
-    
-
-private:
-    enum class SortType {
-        ASCENDING,
-        DESCENDING
-    };
+   private:
+    enum class SortType { ASCENDING, DESCENDING };
 
     double tick_size;
     double exp_lower;
@@ -55,17 +50,20 @@ private:
     inline bool get_bitmap(double key);
     inline void set_bitmap(double key, bool bit);
 
-public:
-    
+   public:
     FastMap() = delete;
-    FastMap(double tick, double lower_bound, double upper_bound, SortType sort) :
-    tick_size(tick), exp_lower(lower_bound), exp_upper(upper_bound), _size(0), sort_type(sort),
-    best_rest_ptr(nullptr), data((upper_bound - lower_bound)/tick), 
-    bitmap((upper_bound - lower_bound)/(8*tick)) {}
+    FastMap(double tick, double lower_bound, double upper_bound, SortType sort)
+        : tick_size(tick),
+          exp_lower(lower_bound),
+          exp_upper(upper_bound),
+          _size(0),
+          sort_type(sort),
+          best_rest_ptr(nullptr),
+          data((upper_bound - lower_bound) / tick),
+          bitmap((upper_bound - lower_bound) / (8 * tick)) {}
 
-    
     const std::pair<double, T>* begin();
-    
+
     /*
     end() not supported for now because
     iteration over non-empty buckets is
@@ -96,9 +94,6 @@ public:
 
     const T& at(double key);
     T& operator[](double key);
-
-
-
 };
 
 template <typename T>
@@ -121,7 +116,7 @@ inline void FastMap<T>::set_bitmap(double key, bool bit) {
     size_t chunk = idx >> 3;
     byte chunk_offset = idx & (0b111);
     byte mask;
-    if(bit) {
+    if (bit) {
         // bitwise OR with all bits set to 0 except for chunk offset
         mask = 1 << chunk_offset;
         bitmap[chunk] |= mask;
@@ -154,13 +149,46 @@ size_t FastMap<T>::size() {
 
 template <typename T>
 const std::pair<double, T>* FastMap<T>::find(double key) {
-    //check bitmap if value exists else return nullptr
+    // check bitmap if value exists else return nullptr
     return get_bitmap(key) ? data.data() + calc_idx(key) : nullptr;
 }
 
 template <typename T>
 const T& FastMap<T>::at(double key) {
-    if(get_bitmap(key)) return data[calc_idx(key)].second;
+    if (get_bitmap(key)) return data[calc_idx(key)].second;
 
     throw std::runtime_error("Key does not exist!");
+}
+
+// TODO: Can we use concepts to force .clear()?
+template <typename T>
+bool FastMap<T>::erase(double key) {
+    // set bit pointed to by key to false
+    if(!get_bitmap(key)) {
+        return false;
+    }
+    set_bitmap(key, false);
+    // update best_rest_ptr if necessary
+
+    return true;
+}
+
+template <typename T>
+T& FastMap<T>::operator[](double key) {
+    // set bit pointed to by key to true
+    
+
+    set_bitmap(key, true);
+
+    size_t idx = calc_idx(key);
+
+    // update best_rest_ptr if necessary
+    if ((sort_type == SortType::ASCENDING &&
+         best_rest_ptr - data.data() < idx) ||
+        (sort_type == SortType::DESCENDING &&
+         best_rest_ptr - data.data() > idx)) {
+        best_rest_ptr = data.data() + idx;
+    }
+
+    return data[calc_idx(key)];
 }
