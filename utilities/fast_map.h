@@ -26,9 +26,10 @@ Then our price levels would look like this:
 To find the best bid/ask we will use a pointer.
 
 */
+#include <bit>
 #include <stdexcept>
 #include <vector>
-#include <bit>
+
 #include "pool.h"
 
 using word = unsigned long long;
@@ -37,11 +38,10 @@ constexpr uint8_t WORD_SIZE = 64;
 
 template <typename T>
 class FastMap {
-public:
+   public:
     enum class SortType { ASCENDING, DESCENDING };
-private:
-    
 
+   private:
     double tick_size;
     double exp_lower;
     double exp_upper;
@@ -55,17 +55,29 @@ private:
     inline bool get_bitmap(double key);
     inline void set_bitmap(double key, bool bit);
 
-public:
+   public:
     FastMap() = delete;
-    FastMap(double tick, double lower_bound, double upper_bound, SortType sort)
+    FastMap(double tick, double center, double range, SortType sort)
         : tick_size(tick),
-          exp_lower(lower_bound),
-          exp_upper(upper_bound),
+          exp_lower(center - range / 2),
+          exp_upper(center + range / 2),
           _size(0),
           sort_type(sort),
           best_rest_ptr(nullptr),
-          data((upper_bound - lower_bound) / tick),
-          bitmap((upper_bound - lower_bound) / (WORD_SIZE * tick)) {}
+          data((exp_upper - exp_lower) / tick),
+          bitmap((exp_upper - exp_lower) / (WORD_SIZE * tick)) {}
+
+    FastMap(double tick, SortType sort)
+        : tick_size(tick), _size(0), sort_type(sort), best_rest_ptr(nullptr) {}
+
+
+    void init_map(double center, double range) {
+        exp_lower = center - range / 2;
+        exp_upper = center + range / 2;
+
+        data.resize((exp_upper - exp_lower) / tick);
+        bitmap.resize((exp_upper - exp_lower) / (WORD_SIZE * tick))
+    }
 
     const std::pair<double, T>* begin();
 
@@ -105,7 +117,6 @@ template <typename T>
 inline size_t FastMap<T>::calc_idx(double key) {
     return (key - exp_lower) / tick_size;
 }
-
 
 /*
 TODO: Merge get_bitmap and set_bitmap into one function
@@ -174,22 +185,23 @@ const T& FastMap<T>::at(double key) {
 template <typename T>
 bool FastMap<T>::erase(double key) {
     // set bit pointed to by key to false
-    if(!get_bitmap(key)) {
+    if (!get_bitmap(key)) {
         return false;
     }
     set_bitmap(key, false);
+    _size--;
     // update best_rest_ptr if necessary
 
     size_t chunk = calc_idx(key) >> 6;
     uint8_t offset;
 
-    if(best_rest_ptr - data.data() != calc_idx(key)) {
+    if (best_rest_ptr - data.data() != calc_idx(key)) {
         return true;
     }
 
     if (sort_type == SortType::ASCENDING) {
-        while(std::countr_zero(bitmap[chunk]) == 1 << 6) {
-            if(chunk == 0) {
+        while (std::countr_zero(bitmap[chunk]) == 1 << 6) {
+            if (chunk == 0) {
                 best_rest_ptr = nullptr;
                 return true;
             }
@@ -197,8 +209,8 @@ bool FastMap<T>::erase(double key) {
         }
         offset = WORD_SIZE - (std::countr_zero(bitmap[chunk]));
     } else {
-        while(std::countl_zero(bitmap[chunk]) == 1 << 6) {
-            if(chunk == bitmap.size() - 1) {
+        while (std::countl_zero(bitmap[chunk]) == 1 << 6) {
+            if (chunk == bitmap.size() - 1) {
                 best_rest_ptr = nullptr;
                 return true;
             }
@@ -214,23 +226,24 @@ bool FastMap<T>::erase(double key) {
 
 template <typename T>
 T& FastMap<T>::operator[](double key) {
-    // set bit pointed to by key to true
-    
+    size_t idx = calc_idx(key);
+    if (!get_bitmap(key)) {
+        _size++;
+    }
 
     set_bitmap(key, true);
 
-    size_t idx = calc_idx(key);
-
-
-    //TODO: Get rid of branches in hot path using template programming?
-    // update best_rest_ptr if necessary
-    if (!best_rest_ptr || (sort_type == SortType::ASCENDING &&
-         best_rest_ptr - data.data() < idx) ||
-        (sort_type == SortType::DESCENDING &&
-         best_rest_ptr - data.data() > idx)) {
+    // TODO: Get rid of branches in hot path using template programming?
+    //  update best_rest_ptr if necessary
+    const size_t current_idx =
+        best_rest_ptr ? static_cast<size_t>(best_rest_ptr - data.data())
+                      : static_cast<size_t>(-1);
+    if (!best_rest_ptr ||
+        (sort_type == SortType::ASCENDING && current_idx < idx) ||
+        (sort_type == SortType::DESCENDING && current_idx > idx)) {
         best_rest_ptr = data.data() + idx;
     }
 
-    data[calc_idx(key)].first = key;
-    return data[calc_idx(key)].second;
+    data[idx].first = key;
+    return data[idx].second;
 }
