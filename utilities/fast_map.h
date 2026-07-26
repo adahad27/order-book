@@ -28,9 +28,10 @@ To find the best bid/ask we will use a pointer.
 */
 #include <stdexcept>
 #include <vector>
+#include <bit>
 #include "pool.h"
 
-using byte = unsigned char;
+using word = unsigned long long;
 
 template <typename T>
 class FastMap {
@@ -44,7 +45,7 @@ class FastMap {
     SortType sort_type;
     size_t _size;
     std::vector<std::vector<std::pair<double, T>>> data;
-    std::vector<byte> bitmap;
+    std::vector<word> bitmap;
 
     inline size_t calc_idx(double key);
     inline bool get_bitmap(double key);
@@ -101,11 +102,16 @@ inline size_t FastMap<T>::calc_idx(double key) {
     return (key - exp_lower) / tick_size;
 }
 
+
+/*
+TODO: Merge get_bitmap and set_bitmap into one function
+to remove extra calc_idx call?
+*/
 template <typename T>
 inline bool FastMap<T>::get_bitmap(double key) {
     size_t idx = calc_idx(key);
-    size_t chunk = idx >> 3;
-    byte chunk_offset = idx & (0b111);
+    size_t chunk = idx >> 6;
+    word chunk_offset = idx & ((1 << 6) - 1);
 
     return bitmap[chunk] & (1 << chunk_offset);
 }
@@ -113,9 +119,9 @@ inline bool FastMap<T>::get_bitmap(double key) {
 template <typename T>
 inline void FastMap<T>::set_bitmap(double key, bool bit) {
     size_t idx = calc_idx(key);
-    size_t chunk = idx >> 3;
-    byte chunk_offset = idx & (0b111);
-    byte mask;
+    size_t chunk = idx >> 6;
+    word chunk_offset = idx & ((1 << 6) - 1);
+    word mask;
     if (bit) {
         // bitwise OR with all bits set to 0 except for chunk offset
         mask = 1 << chunk_offset;
@@ -170,6 +176,32 @@ bool FastMap<T>::erase(double key) {
     set_bitmap(key, false);
     // update best_rest_ptr if necessary
 
+    size_t chunk = calc_idx(key);
+    uint8_t offset;
+    if (sort_type == SortType::ASCENDING) {
+        /*
+        If we erased something and we are in ascending
+        order, then we must go left, i.e. we look at
+        the number of trailing zeros on some word
+        */
+        while(std::countr_zero(bitmap[chunk]) == 1 << 6) {
+            chunk--;
+        }
+        offset = std::countr_zero(bitmap[chunk]) - 1;
+    } else {
+        /*
+        If we erased something and we are in descending
+        order, then we must go right, i.e. we look at
+        the number of leading zeros on some word
+        */
+        while(std::countl_zero(bitmap[chunk]) == 1 << 6) {
+            chunk++;
+        }
+        offset = std::countl_zero(bitmap[chunk]) + 1;
+    }
+
+    best_rest_ptr = data.data() + (chunk << 6) + offset;
+
     return true;
 }
 
@@ -182,6 +214,8 @@ T& FastMap<T>::operator[](double key) {
 
     size_t idx = calc_idx(key);
 
+
+    //TODO: Get rid of branches in hot path using template programming?
     // update best_rest_ptr if necessary
     if ((sort_type == SortType::ASCENDING &&
          best_rest_ptr - data.data() < idx) ||
