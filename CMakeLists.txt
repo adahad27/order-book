@@ -9,6 +9,7 @@ add_executable(server src/server/server.cpp)
 add_executable(tester tests/tester.cpp)
 add_executable(pool tests/test_pool.cpp)
 add_executable(queue tests/test_queue.cpp)
+add_executable(map tests/test_map.cpp)
 
 add_subdirectory(src)
 add_subdirectory(utilities)

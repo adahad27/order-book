@@ -33,10 +33,14 @@ To find the best bid/ask we will use a pointer.
 
 using word = unsigned long long;
 
+constexpr uint8_t WORD_SIZE = 64;
+
 template <typename T>
 class FastMap {
-   private:
+public:
     enum class SortType { ASCENDING, DESCENDING };
+private:
+    
 
     double tick_size;
     double exp_lower;
@@ -44,14 +48,14 @@ class FastMap {
     std::pair<double, T>* best_rest_ptr;
     SortType sort_type;
     size_t _size;
-    std::vector<std::vector<std::pair<double, T>>> data;
+    std::vector<std::pair<double, T>> data;
     std::vector<word> bitmap;
 
     inline size_t calc_idx(double key);
     inline bool get_bitmap(double key);
     inline void set_bitmap(double key, bool bit);
 
-   public:
+public:
     FastMap() = delete;
     FastMap(double tick, double lower_bound, double upper_bound, SortType sort)
         : tick_size(tick),
@@ -61,7 +65,7 @@ class FastMap {
           sort_type(sort),
           best_rest_ptr(nullptr),
           data((upper_bound - lower_bound) / tick),
-          bitmap((upper_bound - lower_bound) / (8 * tick)) {}
+          bitmap((upper_bound - lower_bound) / (WORD_SIZE * tick)) {}
 
     const std::pair<double, T>* begin();
 
@@ -111,24 +115,24 @@ template <typename T>
 inline bool FastMap<T>::get_bitmap(double key) {
     size_t idx = calc_idx(key);
     size_t chunk = idx >> 6;
-    word chunk_offset = idx & ((1 << 6) - 1);
+    word chunk_offset = WORD_SIZE - idx & ((1 << 6) - 1);
 
-    return bitmap[chunk] & (1 << chunk_offset);
+    return bitmap[chunk] & (static_cast<word>(1) << chunk_offset);
 }
 
 template <typename T>
 inline void FastMap<T>::set_bitmap(double key, bool bit) {
     size_t idx = calc_idx(key);
     size_t chunk = idx >> 6;
-    word chunk_offset = idx & ((1 << 6) - 1);
+    word chunk_offset = WORD_SIZE - idx & ((1 << 6) - 1);
     word mask;
     if (bit) {
         // bitwise OR with all bits set to 0 except for chunk offset
-        mask = 1 << chunk_offset;
+        mask = static_cast<word>(1) << chunk_offset;
         bitmap[chunk] |= mask;
     } else {
         // bitwise AND with all bits set to 1 except for chunk offset
-        mask = ~(1 << chunk_offset);
+        mask = ~(static_cast<word>(1) << chunk_offset);
         bitmap[chunk] &= mask;
     }
 }
@@ -139,7 +143,7 @@ points to something valid and not the
 nullptr
 */
 template <typename T>
-const std::pair<double, T>* begin() {
+const std::pair<double, T>* FastMap<T>::begin() {
     return best_rest_ptr;
 }
 
@@ -176,7 +180,7 @@ bool FastMap<T>::erase(double key) {
     set_bitmap(key, false);
     // update best_rest_ptr if necessary
 
-    size_t chunk = calc_idx(key);
+    size_t chunk = calc_idx(key) >> 6;
     uint8_t offset;
     if (sort_type == SortType::ASCENDING) {
         /*
@@ -187,7 +191,7 @@ bool FastMap<T>::erase(double key) {
         while(std::countr_zero(bitmap[chunk]) == 1 << 6) {
             chunk--;
         }
-        offset = std::countr_zero(bitmap[chunk]) - 1;
+        offset = WORD_SIZE - (std::countr_zero(bitmap[chunk]));
     } else {
         /*
         If we erased something and we are in descending
@@ -197,7 +201,7 @@ bool FastMap<T>::erase(double key) {
         while(std::countl_zero(bitmap[chunk]) == 1 << 6) {
             chunk++;
         }
-        offset = std::countl_zero(bitmap[chunk]) + 1;
+        offset = WORD_SIZE - (std::countl_zero(bitmap[chunk]));
     }
 
     best_rest_ptr = data.data() + (chunk << 6) + offset;
@@ -217,12 +221,13 @@ T& FastMap<T>::operator[](double key) {
 
     //TODO: Get rid of branches in hot path using template programming?
     // update best_rest_ptr if necessary
-    if ((sort_type == SortType::ASCENDING &&
+    if (!best_rest_ptr || (sort_type == SortType::ASCENDING &&
          best_rest_ptr - data.data() < idx) ||
         (sort_type == SortType::DESCENDING &&
          best_rest_ptr - data.data() > idx)) {
         best_rest_ptr = data.data() + idx;
     }
 
-    return data[calc_idx(key)];
+    data[calc_idx(key)].first = key;
+    return data[calc_idx(key)].second;
 }
