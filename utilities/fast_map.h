@@ -182,26 +182,29 @@ bool FastMap<T>::erase(double key) {
 
     size_t chunk = calc_idx(key) >> 6;
     uint8_t offset;
+
+    if(best_rest_ptr - data.data() != calc_idx(key)) {
+        return true;
+    }
+
     if (sort_type == SortType::ASCENDING) {
-        /*
-        If we erased something and we are in ascending
-        order, then we must go left, i.e. we look at
-        the number of trailing zeros on some word
-        */
         while(std::countr_zero(bitmap[chunk]) == 1 << 6) {
+            if(chunk == 0) {
+                best_rest_ptr = nullptr;
+                return true;
+            }
             chunk--;
         }
         offset = WORD_SIZE - (std::countr_zero(bitmap[chunk]));
     } else {
-        /*
-        If we erased something and we are in descending
-        order, then we must go right, i.e. we look at
-        the number of leading zeros on some word
-        */
         while(std::countl_zero(bitmap[chunk]) == 1 << 6) {
+            if(chunk == bitmap.size() - 1) {
+                best_rest_ptr = nullptr;
+                return true;
+            }
             chunk++;
         }
-        offset = WORD_SIZE - (std::countl_zero(bitmap[chunk]));
+        offset = (std::countl_zero(bitmap[chunk]) + 1);
     }
 
     best_rest_ptr = data.data() + (chunk << 6) + offset;
