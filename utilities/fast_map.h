@@ -29,8 +29,8 @@ To find the best bid/ask we will use a pointer.
 #include <bit>
 #include <stdexcept>
 #include <vector>
+#include "types.h"
 
-#include "pool.h"
 
 using word = unsigned long long;
 
@@ -38,9 +38,6 @@ constexpr uint8_t WORD_SIZE = 64;
 
 template <typename T>
 class FastMap {
-   public:
-    enum class SortType { ASCENDING, DESCENDING };
-
    private:
     double tick_size;
     double exp_lower;
@@ -56,7 +53,8 @@ class FastMap {
     inline void set_bitmap(double key, bool bit);
 
    public:
-    FastMap() = delete;
+    FastMap(){}
+
     FastMap(double tick, double center, double range, SortType sort)
         : tick_size(tick),
           exp_lower(center - range / 2),
@@ -67,19 +65,22 @@ class FastMap {
           data((exp_upper - exp_lower) / tick),
           bitmap((exp_upper - exp_lower) / (WORD_SIZE * tick)) {}
 
-    FastMap(double tick, SortType sort)
-        : tick_size(tick), _size(0), sort_type(sort), best_rest_ptr(nullptr) {}
 
 
-    void init_map(double center, double range) {
+    void init_map(double tick, double center, double range, SortType sort) {
+        
+        tick_size = tick;
+        _size = 0;
+        sort_type = sort;
+        best_rest_ptr = nullptr;        
         exp_lower = center - range / 2;
         exp_upper = center + range / 2;
 
-        data.resize((exp_upper - exp_lower) / tick);
-        bitmap.resize((exp_upper - exp_lower) / (WORD_SIZE * tick))
+        data.resize((exp_upper - exp_lower) / tick_size);
+        bitmap.resize((exp_upper - exp_lower) / (WORD_SIZE * tick_size));
     }
 
-    const std::pair<double, T>* begin();
+    std::pair<double, T>* begin();
 
     /*
     end() not supported for now because
@@ -106,7 +107,7 @@ class FastMap {
     */
     // const std::pair<double, T>* insert(double key, T value);
     // const std::pair<double, T>* emplace(double key, T value);
-    const std::pair<double, T>* find(double key);
+    std::pair<double, T>* find(double key);
     bool erase(double key);
 
     const T& at(double key);
@@ -154,7 +155,7 @@ points to something valid and not the
 nullptr
 */
 template <typename T>
-const std::pair<double, T>* FastMap<T>::begin() {
+std::pair<double, T>* FastMap<T>::begin() {
     return best_rest_ptr;
 }
 
@@ -169,7 +170,7 @@ size_t FastMap<T>::size() {
 }
 
 template <typename T>
-const std::pair<double, T>* FastMap<T>::find(double key) {
+std::pair<double, T>* FastMap<T>::find(double key) {
     // check bitmap if value exists else return nullptr
     return get_bitmap(key) ? data.data() + calc_idx(key) : nullptr;
 }

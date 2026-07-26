@@ -83,9 +83,7 @@ int main() {
             .quantity = 5,
         };
         tester.add_order(sell);
-        assert(tester.ask_book.count("GOOGL") == 1);
         assert(tester.ask_book.at("GOOGL").size() == 1);
-        assert(tester.ask_book.at("GOOGL").count(101) == 1);
         assert(tester.ask_book.at("GOOGL").at(101).size() == 1);
         assert(order_equal(tester.ask_book.at("GOOGL").at(101).front(), sell));
 
@@ -99,7 +97,6 @@ int main() {
         };
         tester.add_order(sell2);
         assert(tester.ask_book.at("GOOGL").size() == 2);
-        assert(tester.ask_book.at("GOOGL").count(100) == 1);
         assert(tester.ask_book.at("GOOGL").at(100).size() == 1);
         assert(order_equal(tester.ask_book.at("GOOGL").at(100).front(), sell2));
 
@@ -281,9 +278,7 @@ int main() {
         size_t prev_events_fb = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("FB").size() == 1);
-        assert(tester.ask_book.at("FB").count(140) == 1);
         assert(tester.ask_book.at("FB").at(140).front().quantity == 5);
-        assert(tester.bid_book.at("FB").count(135) == 1);
         assert(tester.bid_book.at("FB").at(135).front().quantity == 3);
         assert(tester.event_history.size() > prev_events_fb);
         {
@@ -327,7 +322,6 @@ int main() {
         size_t prev_events_ibm = tester.event_history.size();
         tester.add_order(incoming);
         assert(tester.ask_book.at("IBM").size() == 1);
-        assert(tester.ask_book.at("IBM").count(132) == 1);
         assert(tester.ask_book.at("IBM").at(132).front().quantity == 2);
         assert(tester.event_history.size() > prev_events_ibm);
         {
@@ -370,7 +364,6 @@ int main() {
         };
         size_t prev_events_tsla = tester.event_history.size();
         tester.add_order(incoming);
-        assert(tester.ask_book.at("TSLA").count(140) == 1);
         assert(tester.ask_book.at("TSLA").at(140).front().quantity == 6);
         assert(tester.event_history.size() > prev_events_tsla);
         {
@@ -500,7 +493,6 @@ int main() {
             .quantity = 5,
         };
         tester.add_order(bid);
-        assert(tester.ask_book.at("BABA").count(180) == 1);
         assert(tester.ask_book.at("BABA").at(180).front().quantity == 5);
         assert(tester.cancel_order(ask_id));
         assert(tester.ask_book.at("BABA").empty());
@@ -521,7 +513,6 @@ int main() {
         Order modified = ask;
         modified.quantity = 5;
         assert(tester.modify_order(ask_id, modified));
-        assert(tester.ask_book.at("ZM").count(190) == 1);
         assert(tester.ask_book.at("ZM").at(190).front().quantity == 5);
     }
 
@@ -538,7 +529,6 @@ int main() {
         Order modified = ask;
         modified.price = 205;
         assert(tester.modify_order(ask_id, modified));
-        assert(tester.ask_book.at("TWTR").count(205) == 1);
         assert(tester.ask_book.at("TWTR").at(205).front().quantity == 5);
     }
 
@@ -555,7 +545,6 @@ int main() {
         Order modified = ask;
         modified.price = 205;
         assert(tester.modify_order(ask_id, modified));
-        assert(tester.ask_book.at("UBER").count(205) == 1);
         assert(tester.ask_book.at("UBER").at(205).front().quantity == 5);
     }
 

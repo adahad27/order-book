@@ -1,37 +1,40 @@
 #include "ledger.h"
 /*
-REQUIRES: 
+REQUIRES:
 order must have been price matched to a resting order in book.
 
-MODIFIES: 
+MODIFIES:
 order.quantity, book[order.ticker][price]->queue.
 
-EFFECT: 
-DOes price-time matching on the incoming order against resting orders in opposite book.
-Will match most favorable trade until all quantity is exhausted, before moving onto next most favorable trade.
+EFFECT:
+DOes price-time matching on the incoming order against resting orders in
+opposite book. Will match most favorable trade until all quantity is exhausted,
+before moving onto next most favorable trade.
 */
+constexpr double TICK = 0.1;
+constexpr double CENTER = 300;
+constexpr double RANGE = 600;
 
-void Ledger::resolve_order(auto &book, Order &order) {
-    
-    
-    while(order.quantity > 0) {
+void Ledger::resolve_order(auto& book, Order& order) {
+    while (order.quantity > 0) {
         /*
         If queue.empty() -> we remove this price level from the map
 
-        If outstanding >= queue.front().quantity -> pop item from queue, outstanding -= queue.front().quantity
-        If outstanding < queue.front().quantity -> modify queue.front().quantity, outstanding = 0
+        If outstanding >= queue.front().quantity -> pop item from queue,
+        outstanding -= queue.front().quantity If outstanding <
+        queue.front().quantity -> modify queue.front().quantity, outstanding = 0
         |
-        +-> Add to record history if order is executed 
+        +-> Add to record history if order is executed
         */
         double price = book[order.ticker].begin()->first;
-        std::list<Order> &order_queue = book[order.ticker].begin()->second;
-                
+        std::list<Order>& order_queue = book[order.ticker].begin()->second;
+
         FilledOrder filled_order;
         filled_order.ticker = order.ticker;
         filled_order.user_id = order.user_id;
 
-        //TODO: Maybe try replacing this with template function?
-        if(order.order_type == OrderType::BID) {
+        // TODO: Maybe try replacing this with template function?
+        if (order.order_type == OrderType::BID) {
             filled_order.bidder_id = order.user_id;
             filled_order.asker_id = order_queue.front().user_id;
             filled_order.bid_order_id = order.order_id;
@@ -43,39 +46,35 @@ void Ledger::resolve_order(auto &book, Order &order) {
             filled_order.bid_order_id = order_queue.front().order_id;
         }
         filled_order.price = order_queue.front().price;
-        filled_order.quantity = std::min(order_queue.front().quantity, order.quantity);
+        filled_order.quantity =
+            std::min(order_queue.front().quantity, order.quantity);
 
-
-        Event matched_order = Event{.event_type = EventType::ORDER_EXEC, .filled_order = filled_order};
+        Event matched_order = Event{.event_type = EventType::ORDER_EXEC,
+                                    .filled_order = filled_order};
         event_history.emplace_back(matched_order);
 
-        if(order.quantity >= order_queue.front().quantity) {
+        if (order.quantity >= order_queue.front().quantity) {
             order.quantity -= order_queue.front().quantity;
             outstanding_orders.erase(order_queue.front().order_id);
             order_queue.pop_front();
-            
-            
-        } else {       
-            order_queue.front().quantity -= order.quantity;            
+
+        } else {
+            order_queue.front().quantity -= order.quantity;
             order.quantity = 0;
-            
         }
 
-        if(order_queue.empty()) {
+        if (order_queue.empty()) {
             book[order.ticker].erase(price);
             return;
         }
     }
-    
-
-    
 }
 
 uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     std::string ticker{order.ticker};
     double price{order.price};
     uint32_t id;
-    if(order_id.has_value()) {
+    if (order_id.has_value()) {
         /*
         This code path is only triggered when doing a modify.
         Therefore, a response is not pushed from this function
@@ -89,32 +88,40 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
 
     order.order_id = id;
 
-    auto execute_order = [&](auto &home_book, auto &counter_book, std::function<bool(double, double)> compare) {
-        if(order.order_subtype == OrderSubType::MARKET) {
-            //If market order, then don't need to compare order price against resting liquidity price
-            compare = [](double a, double b) {return true;};
+    auto execute_order = [&](auto& home_book, auto& counter_book,
+                             std::function<bool(double, double)> compare) {
+        if (order.order_subtype == OrderSubType::MARKET) {
+            // If market order, then don't need to compare order price against
+            // resting liquidity price
+            compare = [](double a, double b) { return true; };
         }
-        while(counter_book.contains(ticker) && !counter_book[ticker].empty() && compare(price, counter_book[ticker].begin()->first)) {
+        while (counter_book.contains(ticker) && !counter_book[ticker].empty() &&
+               compare(price, counter_book[ticker].begin()->first)) {
             resolve_order(counter_book, order);
-            if(order.quantity == 0) {
+            if (order.quantity == 0) {
                 break;
             }
         }
-        if(order.quantity > 0) {
+        if (order.quantity > 0) {
+            if (!home_book.contains(ticker)) {
+                home_book[ticker].init_map(TICK, CENTER, RANGE,
+                                           order.order_type == OrderType::BID
+                                               ? SortType::ASCENDING
+                                               : SortType::DESCENDING);
+            }
             home_book[ticker][price].emplace_back(order);
-            outstanding_orders[id] = OrderEntry{
-                home_book[ticker].find(price),
-                std::prev(home_book[ticker][price].end())
-            };
-
+            outstanding_orders[id] =
+                OrderEntry{home_book[ticker].find(price),
+                           std::prev(home_book[ticker][price].end())};
         }
     };
 
     if (order.order_type == OrderType::ASK) {
-        execute_order(ask_book, bid_book, [](double a, double b) {return a <= b;});       
+        execute_order(ask_book, bid_book,
+                      [](double a, double b) { return a <= b; });
     } else {
-        execute_order(bid_book, ask_book, [](double a, double b) {return a >= b;});
-        
+        execute_order(bid_book, ask_book,
+                      [](double a, double b) { return a >= b; });
     }
 
     return id;
@@ -125,25 +132,26 @@ uint32_t Ledger::add_order(Order order) {
 }
 
 void Ledger::cancel_order_helper(uint32_t order_id) {
-    Order &order = *(outstanding_orders[order_id].entry);
+    Order& order = *(outstanding_orders[order_id].entry);
 
-    if(outstanding_orders[order_id].entry_list->second.size() == 1) {
-        if(order.order_type == OrderType::ASK) {
+    if (outstanding_orders[order_id].entry_list->second.size() == 1) {
+        if (order.order_type == OrderType::ASK) {
             ask_book[order.ticker].erase(order.price);
         } else {
             bid_book[order.ticker].erase(order.price);
         }
     } else {
-        outstanding_orders[order_id].entry_list->second.erase(outstanding_orders[order_id].entry);
+        outstanding_orders[order_id].entry_list->second.erase(
+            outstanding_orders[order_id].entry);
     }
-    //cannot do a lookup by price to find the queue to delete in because that is O(logn)
-    
-    
+    // cannot do a lookup by price to find the queue to delete in because that
+    // is O(logn)
+
     outstanding_orders.erase(order_id);
 }
 
 bool Ledger::cancel_order(uint32_t order_id) {
-    if(!outstanding_orders.contains(order_id)) {
+    if (!outstanding_orders.contains(order_id)) {
         m_resp_queue.write(false);
         return false;
     } else {
@@ -152,11 +160,10 @@ bool Ledger::cancel_order(uint32_t order_id) {
 
     cancel_order_helper(order_id);
     return true;
-    
 }
 
 bool Ledger::modify_order(uint32_t order_id, Order order) {
-    if(!outstanding_orders.contains(order_id)) {
+    if (!outstanding_orders.contains(order_id)) {
         m_resp_queue.write(false);
         return false;
     } else {
@@ -170,35 +177,32 @@ bool Ledger::modify_order(uint32_t order_id, Order order) {
     order book.
     */
     outstanding_orders[order_id].entry->quantity = order.quantity;
-    if(order.price != outstanding_orders[order_id].entry->price) {
+    if (order.price != outstanding_orders[order_id].entry->price) {
         cancel_order(order_id);
         add_order_id(order, order_id);
-
     }
-    
 
     return true;
-
 }
 
 void Ledger::print_events() {
-    for(uint64_t i = 0; i < event_history.size(); ++i) {
-        std::cout <<"Event " << i << ": " << event_history[i];
+    for (uint64_t i = 0; i < event_history.size(); ++i) {
+        std::cout << "Event " << i << ": " << event_history[i];
     }
 }
 
 void Ledger::start_loop() {
-    while(true) {
+    while (true) {
         /*
         Busy waiting is better than sleeping the CPU here because
         matching should be as responsive as possible even if it
         burns CPU cycles.
         */
         auto wrapped_job = m_req_queue.read();
-        if(!wrapped_job.has_value()) continue;
+        if (!wrapped_job.has_value()) continue;
         Job job = wrapped_job.value();
 
-        switch(job.job_type) {
+        switch (job.job_type) {
             case JobType::ADD:
                 add_order(job.order);
                 break;

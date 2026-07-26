@@ -1,5 +1,6 @@
 #pragma once
-#include <map>
+// #include <map>
+#include "fast_map.h"
 #include <list>
 #include <string>
 #include <unordered_map>
@@ -19,8 +20,8 @@ private:
 
     friend class Tester;
     // Ticker -> Map(Price -> Order)
-    std::unordered_map<std::string, std::map<double, std::list<Order>, std::greater<double>>> bid_book{}; //max-heap
-    std::unordered_map<std::string, std::map<double, std::list<Order>>> ask_book{}; //min-heap
+    std::unordered_map<std::string, FastMap<std::list<Order>>> bid_book; //max-heap
+    std::unordered_map<std::string, FastMap<std::list<Order>>> ask_book; //min-heap
 
     std::unordered_map<uint32_t, OrderEntry> outstanding_orders; //need to use smart pointers here
 

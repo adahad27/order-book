@@ -4,7 +4,7 @@ This project was started in May 2026. The intent of this project is to build a o
 ### Supported Items and Implementation Specific Details:
 1. Support for Limit Orders, Market Orders
 2. Order cancellation/modification
-3. Matching Engine uses Price-Time matching
+3. Matching Engine uses Price-Time matching using Flat Arrays for better cache locality
 4. Event-Driven server architecture
 5. Memory Pools
 6. Lock Free Single Producer Single Consumer Queue
@@ -13,7 +13,6 @@ This project was started in May 2026. The intent of this project is to build a o
 1. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
 2. Memory Optimization tricks like Intrusive Linked Lists
 3. Add persistence logging in case of machine-crashes
-4. Migrating Price Levels from using Sorted Trees to using Flat Arrays
 
 ## Architecture Description:
 There are two major components in this project:

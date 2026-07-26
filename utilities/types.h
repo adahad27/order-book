@@ -8,6 +8,8 @@ enum class OrderType {
     ASK
 };
 
+enum class SortType { ASCENDING, DESCENDING };
+
 enum class OrderSubType {
     MARKET, // buy/sell at whatever the best current price is on the opposite side
     LIMIT, // buy/sell at the limit that is set in the order or a better price
@@ -56,7 +58,7 @@ struct Job {
 };
 
 struct OrderEntry {
-    std::map<double, std::list<Order>>::iterator entry_list;
+    std::pair<double, std::list<Order>>* entry_list;
     std::list<Order>::iterator entry;
 };
 
