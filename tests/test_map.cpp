@@ -2,7 +2,18 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+/*
+TODO:
 
+THIS WILL NOT COMPILE BECAUSE FASTMAP NOW
+EXPECTS TO RECEIVE A CONCEPT THAT HAS THE
+CLEAR() FUNCTION IMPLEMENTED.
+
+STILL NEED TO CHANGE THE TYPE OF FASTMAP
+TO BE A DIFFERENT VALUE, AND THEN REWRITE
+TESTS FOR THAT
+
+*/
 namespace {
 
 void expect(bool condition, const char* message) {

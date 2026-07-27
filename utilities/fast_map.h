@@ -30,13 +30,19 @@ To find the best bid/ask we will use a pointer.
 #include <stdexcept>
 #include <vector>
 #include "types.h"
-
+#include <concepts>
 
 using word = unsigned long long;
 
 constexpr uint8_t WORD_SIZE = 64;
 
 template <typename T>
+    concept Container = requires(T obj) {
+        obj.clear();
+    };
+
+    
+template <Container T>
 class FastMap {
    private:
     double tick_size;
@@ -114,7 +120,7 @@ class FastMap {
     T& operator[](double key);
 };
 
-template <typename T>
+template <Container T>
 inline size_t FastMap<T>::calc_idx(double key) {
     return (key - exp_lower) / tick_size;
 }
@@ -123,7 +129,7 @@ inline size_t FastMap<T>::calc_idx(double key) {
 TODO: Merge get_bitmap and set_bitmap into one function
 to remove extra calc_idx call?
 */
-template <typename T>
+template <Container T>
 inline bool FastMap<T>::get_bitmap(double key) {
     size_t idx = calc_idx(key);
     size_t chunk = idx >> 6;
@@ -132,7 +138,7 @@ inline bool FastMap<T>::get_bitmap(double key) {
     return bitmap[chunk] & (static_cast<word>(1) << chunk_offset);
 }
 
-template <typename T>
+template <Container T>
 inline void FastMap<T>::set_bitmap(double key, bool bit) {
     size_t idx = calc_idx(key);
     size_t chunk = idx >> 6;
@@ -154,28 +160,28 @@ Burden on user to make sure that begin()
 points to something valid and not the
 nullptr
 */
-template <typename T>
+template <Container T>
 std::pair<double, T>* FastMap<T>::begin() {
     return best_rest_ptr;
 }
 
-template <typename T>
+template <Container T>
 bool FastMap<T>::empty() {
     return !_size;
 }
 
-template <typename T>
+template <Container T>
 size_t FastMap<T>::size() {
     return _size;
 }
 
-template <typename T>
+template <Container T>
 std::pair<double, T>* FastMap<T>::find(double key) {
     // check bitmap if value exists else return nullptr
     return get_bitmap(key) ? data.data() + calc_idx(key) : nullptr;
 }
 
-template <typename T>
+template <Container T>
 const T& FastMap<T>::at(double key) {
     if (get_bitmap(key)) return data[calc_idx(key)].second;
 
@@ -183,20 +189,26 @@ const T& FastMap<T>::at(double key) {
 }
 
 // TODO: Can we use concepts to force .clear()?
-template <typename T>
+template <Container T>
 bool FastMap<T>::erase(double key) {
     // set bit pointed to by key to false
     if (!get_bitmap(key)) {
         return false;
     }
     set_bitmap(key, false);
+
     _size--;
     // update best_rest_ptr if necessary
 
-    size_t chunk = calc_idx(key) >> 6;
+    size_t idx = calc_idx(key);
+
+    //clean up data if user did not clean it up
+    data[idx].clear();
+
+    size_t chunk = idx >> 6;
     uint8_t offset;
 
-    if (best_rest_ptr - data.data() != calc_idx(key)) {
+    if (best_rest_ptr - data.data() != idx) {
         return true;
     }
 
@@ -225,7 +237,7 @@ bool FastMap<T>::erase(double key) {
     return true;
 }
 
-template <typename T>
+template <Container T>
 T& FastMap<T>::operator[](double key) {
     size_t idx = calc_idx(key);
     if (!get_bitmap(key)) {
