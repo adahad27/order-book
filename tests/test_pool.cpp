@@ -1,6 +1,7 @@
 #include "pool.h"
 #include <iostream>
 #include <cassert>
+#include "types.h"
 
 
 struct TestRecord : ILLHook {
@@ -37,6 +38,8 @@ int main() {
     
 
     List<TestRecord> list;
+    List<Order> order_list;
+    
 
     TestRecord obj1;
     obj1.field = 1;

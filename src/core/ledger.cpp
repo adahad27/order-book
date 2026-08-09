@@ -27,7 +27,7 @@ void Ledger::resolve_order(auto& book, Order& order) {
         +-> Add to record history if order is executed
         */
         double price = book[order.ticker].begin()->first;
-        std::list<Order>& order_queue = book[order.ticker].begin()->second;
+        List<Order>& order_queue = book[order.ticker].begin()->second;
 
         FilledOrder filled_order;
         filled_order.ticker = order.ticker;
@@ -109,10 +109,10 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
                                                ? SortType::ASCENDING
                                                : SortType::DESCENDING);
             }
-            home_book[ticker][price].emplace_back(order);
+            home_book[ticker][price].push_back(order);
             outstanding_orders[id] =
                 OrderEntry{home_book[ticker].find(price),
-                           std::prev(home_book[ticker][price].end())};
+                           home_book[ticker][price].last()};
         }
     };
 

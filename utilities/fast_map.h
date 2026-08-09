@@ -203,7 +203,7 @@ bool FastMap<T>::erase(double key) {
     size_t idx = calc_idx(key);
 
     //clean up data if user did not clean it up
-    data[idx].clear();
+    data[idx].second.clear();
 
     size_t chunk = idx >> 6;
     uint8_t offset;

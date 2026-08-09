@@ -74,8 +74,8 @@ struct Job {
 };
 
 struct OrderEntry {
-    std::pair<double, std::list<Order>>* entry_list;
-    std::list<Order>::iterator entry;
+    std::pair<double, List<Order>>* entry_list;
+    Order* entry;
 };
 
 struct Event {

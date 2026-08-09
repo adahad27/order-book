@@ -5,6 +5,17 @@
 constexpr uint32_t MAX_LIST_ALLOC_SIZE = 1 << 10;
 
 /*
+Hook that all objects which need to be stored in a linked list must
+inherit from. This will allow for the List class to enforce intrusiveness
+similar to the Boost implementation.
+*/
+struct ILLHook {
+    ILLHook* next{nullptr};
+    ILLHook* prev{nullptr};
+};
+
+
+/*
 Ideas to implement:
 1.) Prevent double frees -> Use a bitmap to track which address offsets are free. The size of the
 bitmap is (num_objects / 8), so relatively efficient memory storage
@@ -12,11 +23,6 @@ bitmap is (num_objects / 8), so relatively efficient memory storage
 Or we could use atomic read-modify-writes to implement a lock-free stack.
 
 */
-struct ILLHook {
-    ILLHook* next{nullptr};
-    ILLHook* prev{nullptr};
-};
-
 template <typename T>
 class Pool {
 private:
@@ -104,10 +110,6 @@ concept ILLHookDerived = std::derived_from<T, ILLHook>;
 
 
 template <ILLHookDerived T>
-/*
-TODO: Enforce a concept to ensure that T has inherited
-from ILLHook.
-*/
 class List {
 private:
     
@@ -157,6 +159,26 @@ public:
         return true;
     }
 
+    void pop_front() {
+        if(_size > 0) {
+            T* front_node = head;
+            head = reinterpret_cast<T*>(head->next);
+            if(head) {
+                head->prev = nullptr;
+            }
+            
+            front_node->next = nullptr;
+            pool.free_obj(front_node);
+            --_size;
+        }
+    }
+
+    void clear() {
+        while(_size > 0) {
+            pop_front();
+        }
+    }
+
     void erase(T* obj) {
         if(!obj) {
             return;
@@ -182,15 +204,35 @@ public:
         --_size;
     }
 
-    uint32_t size() {
+    uint32_t size() const {
         return _size;
     }
 
-    T* front() {
+    bool empty() const {
+        return _size == 0;
+    }
+
+    const T& front() const {
+        return *head;
+    }
+
+    const T& back() const {
+        return *tail;
+    }
+
+    T& front() {
+        return *head;
+    }
+
+    T& back() {
+        return *tail;
+    }
+
+    T* first() {
         return head;
     }
 
-    T* back() {
+    T* last() {
         return tail;
     }
 
