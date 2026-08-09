@@ -8,11 +8,11 @@ This project was started in May 2026. The intent of this project is to build a o
 4. Event-Driven server architecture
 5. Memory Pools
 6. Lock Free Single Producer Single Consumer Queue
+7. Intrusive Linked Lists for maintaining Time Priority
 
 ### Planned Items and Implementation Specific Details:
 1. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
-2. Memory Optimization tricks like Intrusive Linked Lists
-3. Add persistence logging in case of machine-crashes
+2. Add persistence logging in case of machine-crashes
 
 ## Architecture Description:
 There are two major components in this project:
@@ -55,3 +55,8 @@ While concurrency testing is important, there are only a few concurrent parts of
 **Question 4:** Did you benchmark a regular queue protected by a mutex before deciding to implement an SPSC queue?
 
 **Answer:** No I did not. I think that the general engineering advice of turning towards a more complicated solution only if the simpler solution is lacking is true, however I wanted to implement an SPSC queue for the learning experience of being able to write code that exploits atomics and memory ordering. I do have plans in the future of measuring the latency of each, but that would be when directly testing the order book against something that simulates market data. At the time of implementation of the SPSC queue, the infrastructure of testing the order book against simulated market data had not been implemented.
+
+
+**Question 5:** Does your Intrusive Linked List implementation run faster than a traditional double linked list like std::list?
+
+**Answer:** From preliminary testing, it actually runs slower. This will be profiled to reveal where the runtime increase is coming from. My current suspicion is that the runtime can be attributed to the fact that the Order object is currently larger than a cache line, which means that the CPU must fetch across two cache lines and stitch information together. My hypothesis for why it was slower than the std::list was because in the std::list implementation, the Order object did not have the ILL hooks thereby avoiding the cache line spillage. Of course, to verify this, the program will have to be profiled.
