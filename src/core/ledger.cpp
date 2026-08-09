@@ -219,3 +219,27 @@ void Ledger::start_loop() {
 void Ledger::start_ledger() {
     boost::thread engine_thread{&Ledger::start_loop, this};
 }
+
+const std::optional<Order&> Ledger::get_best_ask(const std::string& ticker)  {
+    if(!ask_book.contains(ticker) || !ask_book[ticker].begin() || ask_book[ticker].begin()->second.empty()) {
+        return std::nullopt;
+    }
+    return ask_book[ticker].begin()->second.front();
+    
+}
+
+const std::optional<Order&> Ledger::get_best_bid(const std::string& ticker)  {
+    if(!bid_book.contains(ticker) || !bid_book[ticker].begin() || bid_book[ticker].begin()->second.empty()) {
+        return std::nullopt;
+    }
+    return bid_book[ticker].begin()->second.front();
+}
+
+const std::optional<double> Ledger::get_spread(const std::string& ticker)  {
+    if( !ask_book.contains(ticker) || !ask_book[ticker].begin() || ask_book[ticker].begin()->second.empty() ||
+        !bid_book.contains(ticker) || !bid_book[ticker].begin() || bid_book[ticker].begin()->second.empty()) {
+        return std::nullopt;
+    }
+
+    return ask_book[ticker].begin()->first - bid_book[ticker].begin()->first;
+}

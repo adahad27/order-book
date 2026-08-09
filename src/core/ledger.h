@@ -59,10 +59,10 @@ public:
     //TODO: Move this to another piece of code
     void print_events();
 
-    const Order& get_best_ask() const;
+    const std::optional<Order&> get_best_ask(const std::string& ticker);
 
-    const Order& get_best_bid() const;
+    const std::optional<Order&> get_best_bid(const std::string& ticker);
 
-    //T get_spread() const;
+    const std::optional<double> get_spread(const std::string& ticker);
 
 };

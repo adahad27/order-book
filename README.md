@@ -13,6 +13,8 @@ This project was started in May 2026. The intent of this project is to build a o
 ### Planned Items and Implementation Specific Details:
 1. Support for Stop-Loss, FillOrKill, and ImmediateOrCancel orders
 2. Add persistence logging in case of machine-crashes
+3. Profile code to reveal bottlenecks
+4. Test correctness over NASDAQ-ITCH dataset
 
 ## Architecture Description:
 There are two major components in this project:
