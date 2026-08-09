@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 
-constexpr uint32_t MAX_LIST_ALLOC_SIZE = UINT32_MAX;
+constexpr uint32_t MAX_LIST_ALLOC_SIZE = 1 << 10;
 
 /*
 Ideas to implement:
@@ -95,7 +95,15 @@ public:
     }
 };
 
+
+
 template <typename T>
+concept ILLHookDerived = std::derived_from<T, ILLHook>;
+
+
+
+
+template <ILLHookDerived T>
 /*
 TODO: Enforce a concept to ensure that T has inherited
 from ILLHook.
@@ -149,20 +157,20 @@ public:
         return true;
     }
 
-    void remove(T* obj) {
+    void erase(T* obj) {
         if(!obj) {
             return;
         }
 
         if(obj == head) {
-            head = obj->next;
+            head = reinterpret_cast<T*>(obj->next);
             head->prev = nullptr;
         } else if (obj == tail) {
-            tail = obj->prev;
+            tail = reinterpret_cast<T*>(obj->prev);
             tail->next = nullptr;
         } else {
-            T* prev_node = obj->prev;
-            T* next_node = obj->next;
+            T* prev_node = reinterpret_cast<T*>(obj->prev);
+            T* next_node = reinterpret_cast<T*>(obj->next);
             prev_node->next = next_node;
             next_node->prev = prev_node;
             
