@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 
-constexpr uint32_t MAX_LIST_ALLOC_SIZE = 1 << 10;
+constexpr uint32_t MAX_LIST_ALLOC_SIZE = 1 << 8;
 
 /*
 Hook that all objects which need to be stored in a linked list must
