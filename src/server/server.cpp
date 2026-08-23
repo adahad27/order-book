@@ -103,9 +103,13 @@ bool build_order(const std::vector<std::string> &arguments, size_t offset, Order
     return true;
 }
 
-void handle_write(Connection_State &state) {
+void handle_write(Connection_State &state, bool close) {
     //Write contents of outgoing to file descriptor here.
     size_t msg_len = state.outgoing.size();
+
+    if(msg_len == 0) {
+        return;
+    }
 
     if(send(state.fd, &msg_len, 4, MSG_NOSIGNAL) <= 0) {
         state.want_close = true;
@@ -119,11 +123,11 @@ void handle_write(Connection_State &state) {
         return;
     }
 
-    state.want_close = true;
+    state.want_close = close;
     state.want_write = false;
 }
 
-void process_request(Connection_State &state) {
+void process_request(Connection_State &state, bool &close) {
     int num_cmds;
     int arg_len;
 
@@ -145,6 +149,7 @@ void process_request(Connection_State &state) {
 
     if(arguments.empty()) {
         append_response(state, "ERROR: empty request");
+        close = true;
         return;
     }
 
@@ -156,6 +161,7 @@ void process_request(Connection_State &state) {
         job.job_type = JobType::ADD;
         if(!build_order(arguments, 1, job.order)) {
             append_response(state, "ERROR: invalid add arguments\n");
+            close = true;
             return;
         }
         req_queue.push(job);
@@ -165,6 +171,7 @@ void process_request(Connection_State &state) {
         job.job_type = JobType::CANCEL;
         if(arguments.size() != 2) {
             append_response(state, "ERROR: cancel requires order_id\n");
+            close = true;
             return;
         }
         job.order_id = 0;
@@ -172,6 +179,7 @@ void process_request(Connection_State &state) {
             job.order_id = static_cast<uint32_t>(std::stoul(arguments[1]));
         } catch(...) {
             append_response(state, "ERROR: invalid order_id\n");
+            close = true;
             return;
         }
         req_queue.push(job);
@@ -181,6 +189,7 @@ void process_request(Connection_State &state) {
         job.job_type = JobType::MODIFY;
         if(arguments.size() != 8) {
             append_response(state, "ERROR: modify requires order_id and full order fields\n");
+            close = true;
             return;
         }
         job.order_id = 0;
@@ -188,10 +197,12 @@ void process_request(Connection_State &state) {
             job.order_id = static_cast<uint32_t>(std::stoul(arguments[1]));
         } catch(...) {
             append_response(state, "ERROR: invalid order_id\n");
+            close = true;
             return;
         }
         if(!build_order(arguments, 2, job.order)) {
             append_response(state, "ERROR: invalid modify arguments\n");
+            close = true;
             return;
         }
         req_queue.push(job);
@@ -199,6 +210,7 @@ void process_request(Connection_State &state) {
     }
     else {
         append_response(state, "ERROR: unknown command\n");
+        close = true;
     }
 }
 
@@ -235,8 +247,9 @@ int handle_read(Connection_State &state) {
     }
     
     state.want_read = false;
-    process_request(state);
-    handle_write(state);
+    bool close = false;
+    process_request(state, close);
+    handle_write(state, close);
 
     return 0;
 }
@@ -332,6 +345,8 @@ void run_server(int fd) {
                     std::cout << "Connection established on socket: " << incoming_fd << std::endl;
                 } else if (connections[i].fd == response_fd) {
                     //Handle read logic from response queue here
+                    uint64_t tmp;
+                    read(response_fd, &tmp, sizeof(uint64_t));
                     auto response = resp_queue.pop().value();
                     //Naked read is OK because element is already pushed into queue by the time signal occurs
                     uint32_t id = response.order_id;
@@ -348,7 +363,7 @@ void run_server(int fd) {
                             append_response(state, ok ? "ORDER_MODIFIED" : "ORDER_NOT_FOUND");
                             break;
                     }
-
+                    handle_write(state, true);
                     conn_map.erase(id);
                 }
                 else {
@@ -356,15 +371,15 @@ void run_server(int fd) {
                 }
             }
             if(connections[i].revents & POLLOUT) {
-                handle_write(states[i]);
+                handle_write(states[i], true);
             }
             if(connections[i].revents & POLLHUP || states[i].want_close) {
                 int socket_fd = connections[i].fd;
                 delete_connection(i, connections, states);
                 close(socket_fd);
-                std::cout << "Connection closed on socket: " << socket_fd << std::endl;
-                std::cout << "Current history is: " << std::endl;
-                book.print_events();
+                // std::cout << "Connection closed on socket: " << socket_fd << std::endl;
+                // std::cout << "Current history is: " << std::endl;
+                // book.print_events();
             }
         }
 
