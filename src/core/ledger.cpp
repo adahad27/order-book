@@ -52,7 +52,6 @@ void Ledger::resolve_order(auto& book, Order& order) {
         Event matched_order = Event{.event_type = EventType::ORDER_EXEC,
                                     .filled_order = filled_order};
         event_history.emplace_back(matched_order);
-        std::cout << "WE SHOULD HAVE PUSHED SOMETHING INTO THE EVENT HISTORY\n";
         if (order.quantity >= order_queue.front().quantity) {
             order.quantity -= order_queue.front().quantity;
             outstanding_orders.erase(order_queue.front().order_id);

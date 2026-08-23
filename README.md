@@ -22,11 +22,10 @@ There are two major components in this project:
 2. Core Engine: Responsible for executing client orders
 
 ### Server
-The server is single-threaded, and it uses the event loop paradigm to serve client requests. The server will also be responsible for creating two queues per ticker, one for requests and one for responses. Upon receiving a request for an order from the client, the server will parse the request for correctness, and then pass it to the request queue, and then proceed to block on the response queue waiting for the order book to confirm/deny the validity of the order. The response result from
-the response queue will then be forwarded back to the user.
+The server is single-threaded, and it uses the event loop paradigm to serve client requests. The server will also be responsible for creating two queues per ticker, one for requests and one for responses. Upon receiving a request for an order from the client, the server will parse the request for correctness, and then pass it to the request queue, and then go back into the event loop. It will also poll an eventfd for the internal event that an item is pushed to the response queue by the Core Engine and will respond to the client with the given response and close the connection.
 
 ### Core Engine (TODO)
-The Core Engine will be multi-threaded. There will be one thread per ticker, because there is no shared state in the ask or bid books across tickers. So each request-response queue per ticker will have only one producer and one consumer.
+The Core Engine is single-threaded with respect to a single instrument. Orders are passed from the server/network thread to the Core Engine through the request queue. The Core Engine is responsible for matching incoming orders against resting orders if possible, and if not, then to add them to the resting orders in the book. It will then write the corresponding response to the rseponse queue and signal the eventfd for the server/network thread to handle the rest of the work.
 
 ## Testing
 This project will also be tested using a NASDAQ-ITCH sample dataset. As of right now, this dataset will only be used to test the correctness of the system. The dataset can be downloaded from [here](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/01302019.NASDAQ_ITCH50.gz). The dataset was also isolated specifically for the AAPL ticker using a python script. 
