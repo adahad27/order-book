@@ -11,9 +11,16 @@
 #include <fcntl.h>
 #include <iostream>
 #include <deque>
+#include <sys/eventfd.h>
+
+
+int response_fd = eventfd(0, 0);
+uint32_t req_id{0};
 
 SPSCQueue<Job> req_queue(1 << 16);
-SPSCQueue<uint32_t> resp_queue(1 << 16);
+SPSCQueue<Response> resp_queue(1 << 16, response_fd);
+
+
 
 Ledger book(req_queue, resp_queue);
 
@@ -32,7 +39,7 @@ struct Connection_State {
     std::vector<uint8_t> outgoing;
 };
 
-
+std::unordered_map<uint32_t, Connection_State*> conn_map;
 
 void append_response(Connection_State &state, const std::string &response) {
     state.outgoing.insert(state.outgoing.end(), response.begin(), response.end());
@@ -151,16 +158,8 @@ void process_request(Connection_State &state) {
             append_response(state, "ERROR: invalid add arguments\n");
             return;
         }
-        req_queue.write(job);
-        uint32_t id;
-        while(true) {
-            auto response = resp_queue.read();
-            if(response.has_value()) {
-                id = response.value();
-                break; 
-            }
-        }
-        append_response(state, "ORDER_ADDED:" + std::to_string(id));
+        req_queue.push(job);
+        conn_map[req_id++] = &state;
     }
     else if(command == "cancel") {
         job.job_type = JobType::CANCEL;
@@ -175,16 +174,8 @@ void process_request(Connection_State &state) {
             append_response(state, "ERROR: invalid order_id\n");
             return;
         }
-        req_queue.write(job);
-        bool ok;
-        while(true) {
-            auto response = resp_queue.read();
-            if(response.has_value()) {
-                ok = response.value();
-                break; 
-            }
-        }
-        append_response(state, ok ? "ORDER_CANCELLED" : "ORDER_NOT_FOUND");
+        req_queue.push(job);
+        conn_map[req_id] = &state;
     }
     else if(command == "modify") {
         job.job_type = JobType::MODIFY;
@@ -203,16 +194,8 @@ void process_request(Connection_State &state) {
             append_response(state, "ERROR: invalid modify arguments\n");
             return;
         }
-        req_queue.write(job);
-        bool ok;
-        while(true) {
-            auto response = resp_queue.read();
-            if(response.has_value()) {
-                ok = response.value();
-                break; 
-            }
-        }
-        append_response(state, ok ? "ORDER_MODIFIED" : "ORDER_NOT_FOUND");
+        req_queue.push(job);
+        conn_map[req_id] = &state;
     }
     else {
         append_response(state, "ERROR: unknown command\n");
@@ -318,6 +301,7 @@ void run_server(int fd) {
     std::vector<Connection_State> states;
 
     add_connection(fd, connections, states);
+    add_connection(response_fd, connections, states);
     
 
     while(true) {
@@ -346,6 +330,26 @@ void run_server(int fd) {
                     add_connection(incoming_fd, connections, states);
                     connections[i].revents = 0;
                     std::cout << "Connection established on socket: " << incoming_fd << std::endl;
+                } else if (connections[i].fd == response_fd) {
+                    //Handle read logic from response queue here
+                    auto response = resp_queue.pop().value();
+                    //Naked read is OK because element is already pushed into queue by the time signal occurs
+                    uint32_t id = response.order_id;
+                    bool ok = response.order_id;
+                    Connection_State &state = *conn_map[id];
+                    switch(response.job_type) {
+                        case JobType::ADD:
+                            append_response(state, "ORDER_ADDED:" + std::to_string(id));
+                            break;
+                        case JobType::CANCEL:
+                            append_response(state, ok ? "ORDER_CANCELLED" : "ORDER_NOT_FOUND");
+                            break;
+                        case JobType::MODIFY:
+                            append_response(state, ok ? "ORDER_MODIFIED" : "ORDER_NOT_FOUND");
+                            break;
+                    }
+
+                    conn_map.erase(id);
                 }
                 else {
                     handle_read(states[i]);

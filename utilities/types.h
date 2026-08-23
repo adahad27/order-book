@@ -73,6 +73,12 @@ struct Job {
     Order order;
 };
 
+struct Response {
+    JobType job_type;
+    uint32_t order_id;
+    uint32_t response;
+};
+
 struct OrderEntry {
     std::pair<double, List<Order>>* entry_list;
     Order* entry;

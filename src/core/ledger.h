@@ -14,6 +14,8 @@
 
 class Tester;
 
+extern int response_fd;
+
 class Ledger {
 private:
 
@@ -29,7 +31,7 @@ private:
     uint32_t global_order_id;
 
     SPSCQueue<Job> &m_req_queue;
-    SPSCQueue<uint32_t> &m_resp_queue;
+    SPSCQueue<Response> &m_resp_queue;
 
     void resolve_order(auto &book, Order &order);
 
@@ -49,7 +51,7 @@ private:
 public:
 
 
-    Ledger(SPSCQueue<Job> &req_queue, SPSCQueue<uint32_t> &resp_queue) : 
+    Ledger(SPSCQueue<Job> &req_queue, SPSCQueue<Response> &resp_queue) : 
     global_order_id(0), m_req_queue(req_queue), m_resp_queue(resp_queue) {}
 
     void start_ledger();

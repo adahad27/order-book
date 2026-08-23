@@ -73,18 +73,7 @@ void Ledger::resolve_order(auto& book, Order& order) {
 uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     std::string ticker{order.ticker};
     double price{order.price};
-    uint32_t id;
-    if (order_id.has_value()) {
-        /*
-        This code path is only triggered when doing a modify.
-        Therefore, a response is not pushed from this function
-        when called as a helper from modify.
-        */
-        id = order_id.value();
-    } else {
-        id = global_order_id++;
-        m_resp_queue.write(id);
-    }
+    uint32_t id = order_id.has_value() ? order_id.value() : (global_order_id++);
 
     order.order_id = id;
 
@@ -124,6 +113,9 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
                       [](double a, double b) { return a >= b; });
     }
 
+    if(!order_id.has_value()) {
+        m_resp_queue.push(Response{.job_type = JobType::ADD, .order_id = id, .response = id});
+    }
     return id;
 }
 
@@ -152,22 +144,20 @@ void Ledger::cancel_order_helper(uint32_t order_id) {
 
 bool Ledger::cancel_order(uint32_t order_id) {
     if (!outstanding_orders.contains(order_id)) {
-        m_resp_queue.write(false);
+        m_resp_queue.push(Response{.job_type = JobType::ADD, .order_id = order_id, .response = false});
         return false;
-    } else {
-        m_resp_queue.write(true);
     }
 
     cancel_order_helper(order_id);
+    m_resp_queue.push(Response{.job_type = JobType::ADD, .order_id = order_id, .response = true});
+
     return true;
 }
 
 bool Ledger::modify_order(uint32_t order_id, Order order) {
     if (!outstanding_orders.contains(order_id)) {
-        m_resp_queue.write(false);
+        m_resp_queue.push(Response{.job_type = JobType::ADD, .order_id = order_id, .response = false});
         return false;
-    } else {
-        m_resp_queue.write(true);
     }
 
     /*
@@ -181,6 +171,7 @@ bool Ledger::modify_order(uint32_t order_id, Order order) {
         cancel_order(order_id);
         add_order_id(order, order_id);
     }
+    m_resp_queue.push(Response{.job_type = JobType::ADD, .order_id = order_id, .response = true});
 
     return true;
 }
@@ -198,7 +189,7 @@ void Ledger::start_loop() {
         matching should be as responsive as possible even if it
         burns CPU cycles.
         */
-        auto wrapped_job = m_req_queue.read();
+        auto wrapped_job = m_req_queue.pop();
         if (!wrapped_job.has_value()) continue;
         Job job = wrapped_job.value();
 

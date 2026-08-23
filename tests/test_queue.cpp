@@ -12,7 +12,7 @@ constexpr uint8_t YIELD_PERCENTAGE = 5;
 
 void producer() {
     for(uint64_t i = 0; i < ITERATIONS;) {
-        if(q.write(i)) {
+        if(q.push(i)) {
             i++;
         }
         uint8_t percentage = rand() % 100;
@@ -26,7 +26,7 @@ void producer() {
 void consumer() {
     uint64_t expected = 0;
     while(expected < ITERATIONS) {
-        std::optional<int> val = q.read();
+        std::optional<int> val = q.pop();
 
         if(val.has_value()) {
             if(val.value() != expected) {
@@ -81,38 +81,38 @@ int main() {
     
     // Handles checking basic pushing/popping
     for(size_t i = 0; i < 8; ++i) {
-        q.write(i);
+        q.push(i);
     }
     
     for(size_t i = 0; i < 8; ++i) {
-        assert(q.read().value() == i);
+        assert(q.pop().value() == i);
     }
 
     std::cout << "TEST PASSED: Basic pushing/popping for lock free queue...\n";
 
     
-    assert(!q.read().has_value());
+    assert(!q.pop().has_value());
 
     std::cout << "TEST PASSED: Reading when queue is empty...\n";
 
     for(size_t i = 0; i < 8; ++i) {
-        q.write(i);
+        q.push(i);
     }
 
-    assert(!q.write(8));
+    assert(!q.push(8));
 
     std::cout << "TEST PASSED: Writing when queue is full...\n";
 
     for(size_t i = 0; i < 4; ++i) {
-        q.read(); //0 - 3 should no longer be in queue
+        q.pop(); //0 - 3 should no longer be in queue
     }
 
     for(size_t i = 8; i < 12; ++i) {
-        q.write(i); //queue should contain 4-11
+        q.push(i); //queue should contain 4-11
     }
 
     for(size_t i = 4; i < 12; ++i) {
-        assert(q.read().value() == i);
+        assert(q.pop().value() == i);
     }
 
     std::cout << "TEST PASSED: Testing wrap around for queue...\n";

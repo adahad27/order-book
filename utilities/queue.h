@@ -113,6 +113,8 @@ class SPSCQueue {
 private:
 
     std::vector<T> data;
+    const int signal_fd;
+    const uint64_t u {1};
 
     alignas(64) std::atomic<uint64_t> m_head;
     alignas(64) std::atomic<uint64_t> m_tail;
@@ -121,7 +123,15 @@ public:
 
     SPSCQueue() = delete;
 
-    SPSCQueue(uint32_t capacity) : data(capacity) {
+    SPSCQueue(uint32_t capacity) : data(capacity), signal_fd(-1) {
+        if(capacity == 0) {
+            throw std::runtime_error("Cannot have queue of capacity 0");
+        } else if (capacity & (capacity - 1) != 0) {
+            throw std::runtime_error("Must set queue to have capacity of power of 2");
+        }
+    }
+
+    SPSCQueue(uint32_t capacity, int fd) : data(capacity), signal_fd(fd){
         if(capacity == 0) {
             throw std::runtime_error("Cannot have queue of capacity 0");
         } else if (capacity & (capacity - 1) != 0) {
@@ -148,7 +158,7 @@ public:
 
     }
 
-    bool write(const T& v) {
+    bool push(const T& v) {
 
         //Load the head/tail atomically with memory_order_acquire
         uint64_t tail = m_tail.load(std::memory_order_acquire);
@@ -167,10 +177,20 @@ public:
         //Commit the write
         m_tail.store(tail + 1, std::memory_order_release);
 
+        /*
+        TODO: This branch statement is not really a problem because of branch
+        predictors, but it can be optimized away using template programming and
+        also if constexpr().
+        */
+        if(signal_fd != -1) {
+            write(signal_fd, &u, sizeof(uint64_t));
+        }
+        
+
         return true;
     }
 
-    std::optional<T> read() {
+    std::optional<T> pop() {
         //Load the head/tail atomically with memory_order_acquire
         uint64_t tail = m_tail.load(std::memory_order_acquire);
         uint64_t head = m_head.load(std::memory_order_acquire);
