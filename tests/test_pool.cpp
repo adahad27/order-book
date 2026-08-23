@@ -48,13 +48,13 @@ int main() {
 
     list.push_back(obj1);
     assert(list.size() == 1);
-    assert(list.front()->field == 1);
-    assert(list.back()->field == 1);
+    assert(list.front().field == 1);
+    assert(list.back().field == 1);
 
     list.push_back(obj2);
     assert(list.size() == 2);
-    assert(list.front()->field == 1);
-    assert(list.back()->field == 2);
+    assert(list.front().field == 1);
+    assert(list.back().field == 2);
 
     TestRecord* obj4;
     TestRecord* obj5;
@@ -67,16 +67,16 @@ int main() {
         list.push_back(obj);
 
         if(i == 4) {
-            obj4 = list.back();
+            obj4 = &list.back();
         }
         else if(i == 5) {
-            obj5 = list.back();
+            obj5 = &list.back();
         } else if (i == 6) {
-            obj6 = list.back();
+            obj6 = &list.back();
         }
 
         assert(list.size() == i);
-        assert(list.back()->field == i);
+        assert(list.back().field == i);
     }
 
 

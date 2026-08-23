@@ -67,7 +67,7 @@ static bool order_equal(const Order &lhs, const Order &rhs) {
 
 int main() {
     SPSCQueue<Job> req_queue(1 << 16);
-    SPSCQueue<uint32_t> resp_queue(1 << 16);
+    SPSCQueue<Response> resp_queue(1 << 16);
 
     Ledger book(req_queue, resp_queue);
     Tester tester(book);
