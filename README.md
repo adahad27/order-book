@@ -36,7 +36,7 @@ While concurrency testing is important, there are only a few concurrent parts of
 
 **Question 1:** Why use event-looping over spawning a new thread per client connection?
 
-**Answer:** Event-looping was used because each connection should be relatively short-lived considering that the server should respond immediately after confirming that the order has been received. The work of inserting into the Order Book itself need not be involved to confirm order receival.
+**Answer:** Event-looping was used because each connection should be relatively short-lived considering that the server should respond almost immediately after confirming that the order has been received. The work of inserting into the Order Book itself need not be involved to confirm order receival.
 
 
 **Question 2:** Why use message passing over conventional mutexes and locking?

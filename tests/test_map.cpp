@@ -2,18 +2,25 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
-/*
-TODO:
 
-THIS WILL NOT COMPILE BECAUSE FASTMAP NOW
-EXPECTS TO RECEIVE A CONCEPT THAT HAS THE
-CLEAR() FUNCTION IMPLEMENTED.
+class IntReplacement {
+    int value;
+public:
+    void clear() {
+        return;
+    }
 
-STILL NEED TO CHANGE THE TYPE OF FASTMAP
-TO BE A DIFFERENT VALUE, AND THEN REWRITE
-TESTS FOR THAT
+    bool operator==(int b) const {
+        return value == b;
+    }
 
-*/
+    IntReplacement operator=(int b) {
+        value = b;
+        return *this;
+    }
+};
+
+
 namespace {
 
 void expect(bool condition, const char* message) {
@@ -24,7 +31,7 @@ void expect(bool condition, const char* message) {
 }
 
 void test_ascending_behavior() {
-    FastMap<int> map(0.1, 60.0, 20.0, SortType::ASCENDING);
+    FastMap<IntReplacement> map(0.1, 60.0, 20.0, SortType::ASCENDING);
 
     expect(map.empty(), "new ascending map should be empty");
     expect(map.size() == 0, "new ascending map should have size 0");
@@ -66,7 +73,7 @@ void test_ascending_behavior() {
 }
 
 void test_descending_behavior() {
-    FastMap<int> map(0.1, 40.0, 80.0, SortType::DESCENDING);
+    FastMap<IntReplacement> map(0.1, 40.0, 80.0, SortType::DESCENDING);
 
     map[50.0] = 1;
     map[50.1] = 2;
