@@ -70,13 +70,13 @@ void Ledger::resolve_order(auto& book, Order& order) {
 }
 
 uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
-    std::string ticker{order.ticker};
+    std::string& ticker{order.ticker};
     double price{order.price};
     uint32_t id = order_id.has_value() ? order_id.value() : (global_order_id++);
 
     order.order_id = id;
 
-    auto execute_order = [&](auto& home_book, auto& counter_book,
+    auto execute_order = [&](auto& home_book, auto& counter_book, SortType sort,
                              std::function<bool(double, double)> compare) {
         if (order.order_subtype == OrderSubType::MARKET) {
             // If market order, then don't need to compare order price against
@@ -92,10 +92,7 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
         }
         if (order.quantity > 0) {
             if (!home_book.contains(ticker)) {
-                home_book[ticker].init_map(TICK, CENTER, RANGE,
-                                           order.order_type == OrderType::BID
-                                               ? SortType::ASCENDING
-                                               : SortType::DESCENDING);
+                home_book[ticker].init_map(TICK, CENTER, RANGE, sort);
             }
             home_book[ticker][price].push_back(order);
             outstanding_orders[id] =
@@ -105,10 +102,10 @@ uint32_t Ledger::add_order_id(Order order, std::optional<uint32_t> order_id) {
     };
 
     if (order.order_type == OrderType::ASK) {
-        execute_order(ask_book, bid_book,
+        execute_order(ask_book, bid_book, SortType::DESCENDING,
                       [](double a, double b) { return a <= b; });
     } else {
-        execute_order(bid_book, ask_book,
+        execute_order(bid_book, ask_book, SortType::ASCENDING,
                       [](double a, double b) { return a >= b; });
     }
 
