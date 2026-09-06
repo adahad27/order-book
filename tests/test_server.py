@@ -1,7 +1,16 @@
 import socket
 import struct
 from typing import List
+import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 
+DIR = "data"
+PATH = f"{DIR}/synthetic_data.csv"
+WORKER_COUNT = 10
+ITERATIONS = 100
+
+df = pd.read_csv(PATH, header=None)
+# print(df.shape)
 
 def build_payload(args: List[str]) -> bytes:
     payload = struct.pack("<I", len(args))
@@ -32,13 +41,24 @@ def send_order(args: List[str], host: str = "127.0.0.1", port: int = 8080) -> st
         response_bytes = recv_all(sock, resp_len)
         return response_bytes.decode("utf-8")
 
+def read_order(idx : int):
+    row = df.iloc[idx]
+    order = row.tolist()
+
+    match order[0]:
+        case 'add':
+            order = order[:-1]
+            order[-1] = str(int(order[-1]))
+        case 'cancel':
+            order = order[:-4]
+        case 'modify':
+            order[-1] = str(int(order[-1]))
+            order[-2] = str(order[-2])
+    send_order(order)
 
 if __name__ == "__main__":
-    first_order = ["add", "AAPL", "user1", "BID", "LIMIT", "175.50", "200"]
-    print(send_order(first_order))
 
-    second_order = ["add", "AAPL", "user2", "ASK", "LIMIT", "170.00", "100"]
-    third_order = ["add", "AAPL", "user3", "ASK", "LIMIT", "160.00", "100"]
 
-    print(send_order(second_order))
-    print(send_order(third_order))
+    with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
+        for i in range(ITERATIONS):
+            executor.submit(read_order, i)
