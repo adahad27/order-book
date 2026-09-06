@@ -8,7 +8,7 @@ with test_server.py, make sure to change the value of ITERATIONS in that file as
 well. In the future all of this will be moved to a config file so that only one
 location needs to be modifed.
 """
-ITERATIONS = 100
+ITERATIONS = 100_000
 TICKER = "APPL"
 DIR = "data"
 os.makedirs(DIR, exist_ok=True)
@@ -32,7 +32,10 @@ quantities = np.random.uniform(QUANTITY_LOW, QUANTITY_HIGH, ITERATIONS)
 
 
 
-open(PATH, 'w').close()
+# open(PATH, 'w').close()
+
+with open(PATH, 'w', encoding="utf-8") as file:
+    file.write("order_type, ticker, userid, orderid, side, order_subtype, price, quantity\n")
 
 for i in range(ITERATIONS):
     order_type_number = random.randint(0, 99)

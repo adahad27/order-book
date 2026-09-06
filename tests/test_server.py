@@ -3,13 +3,14 @@ import struct
 from typing import List
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 DIR = "data"
 PATH = f"{DIR}/synthetic_data.csv"
-WORKER_COUNT = 10
-ITERATIONS = 100
+WORKER_COUNT = 4
+ITERATIONS = 100_000
 
-df = pd.read_csv(PATH, header=None)
+df = pd.read_csv(PATH)
 # print(df.shape)
 
 def build_payload(args: List[str]) -> bytes:
@@ -58,7 +59,13 @@ def read_order(idx : int):
 
 if __name__ == "__main__":
 
-
+    start_time = time.perf_counter()
     with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
         for i in range(ITERATIONS):
             executor.submit(read_order, i)
+    end_time = time.perf_counter()
+
+    duration = round(end_time - start_time, 4)
+
+    print(f"All orders processed in {duration}")
+    print(f"The server had a processing speed of {ITERATIONS / duration} and each order took {duration / ITERATIONS * 1e6} us on average")

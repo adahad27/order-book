@@ -30,6 +30,8 @@ The Core Engine is single-threaded with respect to a single instrument. Orders a
 ## Testing
 This project will be initially benchmarked using completely synthesized data sampled from multiple probability distributions. This was done because not all of the features of a complete order book have been implemented as of yet, so the time spent in processing market data and then trimming it to fit the available subset of features would be better spent implementing the actual features.
 
+Using the current randomized infrastructure that employs Python, the server is able to process 4400 orders per second, which means that each order takes ~227us on average.
+
 This project will also be tested using a NASDAQ-ITCH sample dataset. As of right now, this dataset will only be used to test the correctness of the system. The dataset can be downloaded from [here](https://emi.nasdaq.com/ITCH/Nasdaq%20ITCH/01302019.NASDAQ_ITCH50.gz). The dataset was also isolated specifically for the AAPL ticker using a python script. 
 
 While concurrency testing is important, there are only a few concurrent parts of this project, namely the server front-end that handles multiple TCP connections, which end up serialized because of the event loop, and the SPSC queue between the server and the core engine. Both of these objects can be tested for concurrency independently of checking the actual Order Book for concurrent correctness, since the Order Book was written sequentially.
